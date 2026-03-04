@@ -1,0 +1,63 @@
+{
+  "title": "Web Fundamentals — Classic Mode",
+  "mode": "classic",
+  "questions": [
+    {
+      "type": "mcq",
+      "question": "Which HTML element is used to define the title of a document?",
+      "options": ["<head>", "<title>", "<meta>", "<header>"],
+      "answer": 1
+    },
+    {
+      "type": "true-false",
+      "question": "CSS stands for Cascading Style Sheets.",
+      "answer": true
+    },
+    {
+      "type": "fill",
+      "question": "The ___ property in CSS is used to change the text color of an element.",
+      "answer": "color",
+      "caseSensitive": false
+    },
+    {
+      "type": "integer",
+      "question": "How many heading levels are there in HTML (h1 through h?)?",
+      "answer": 6
+    },
+    {
+      "type": "mcq",
+      "question": "Which CSS property controls the space between elements?",
+      "options": ["spacing", "margin", "padding", "gap"],
+      "answer": 1
+    },
+    {
+      "type": "true-false",
+      "question": "JavaScript is a compiled language.",
+      "answer": false
+    },
+    {
+      "type": "mcq",
+      "question": "What does DOM stand for?",
+      "options": ["Document Object Model", "Data Object Model", "Document Output Module", "Dynamic Object Manager"],
+      "answer": 0
+    },
+    {
+      "type": "fill",
+      "question": "In JavaScript, ___ is used to declare a constant variable.",
+      "answer": "const",
+      "caseSensitive": true
+    },
+    {
+      "type": "match",
+      "question": "Match each HTML tag to its purpose.",
+      "left": ["<p>", "<a>", "<img>", "<ul>"],
+      "right": ["Hyperlink", "Unordered list", "Paragraph", "Image"],
+      "answer": [[0, 2], [1, 0], [2, 3], [3, 1]]
+    },
+    {
+      "type": "integer",
+      "question": "What is the default port for HTTPS?",
+      "answer": 443
+    }
+  ]
+}

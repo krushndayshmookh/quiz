@@ -1,0 +1,187 @@
+{
+  "title": "DevOps & CI/CD — Pre-Lecture Assessment",
+  "mode": "blitz",
+  "timePerQuestion": 20,
+  "questions": [
+    {
+      "type": "mcq",
+      "question": "What does CI/CD stand for?",
+      "options": [
+        "Continuous Inspection / Continuous Development",
+        "Central Infrastructure / Central Distribution",
+        "Code Integration / Code Deployment",
+        "Continuous Integration / Continuous Delivery"
+      ],
+      "answer": 3
+    },
+    {
+      "type": "mcq",
+      "question": "Which of these describes a phase in the SDLC?",
+      "options": [
+        "Benchmarking system performance",
+        "Gathering and documenting requirements",
+        "Purchasing cloud infrastructure",
+        "Hiring the development team"
+      ],
+      "answer": 1
+    },
+    {
+      "type": "true-false",
+      "question": "In the Waterfall model, you can easily revisit a completed phase to make changes.",
+      "answer": false
+    },
+    {
+      "type": "mcq",
+      "question": "What best describes the Agile approach to software development?",
+      "options": [
+        "Complete all planning before any coding begins",
+        "Deliver the entire product in a single release",
+        "Build software in short, iterative development cycles",
+        "Eliminate documentation to save development time"
+      ],
+      "answer": 2
+    },
+    {
+      "type": "mcq",
+      "question": "What type of AWS service is EC2?",
+      "options": [
+        "A managed relational database service",
+        "A domain name registration service",
+        "A virtual server provisioning service",
+        "A cloud-based file storage service"
+      ],
+      "answer": 2
+    },
+    {
+      "type": "mcq",
+      "question": "What is AWS S3 primarily used for?",
+      "options": [
+        "Running containerized applications",
+        "Balancing traffic across servers",
+        "Executing serverless code functions",
+        "Storing and retrieving object data"
+      ],
+      "answer": 3
+    },
+    {
+      "type": "fill",
+      "question": "The command to list all files including hidden ones in Linux is: ls ___",
+      "answer": "-la",
+      "caseSensitive": false
+    },
+    {
+      "type": "mcq",
+      "question": "GitHub Actions workflow files are written in which format?",
+      "options": [
+        "YAML",
+        "TOML",
+        "JSON",
+        "XML"
+      ],
+      "answer": 0
+    },
+    {
+      "type": "true-false",
+      "question": "DevOps is a specific tool that gets installed on a server.",
+      "answer": false
+    },
+    {
+      "type": "mcq",
+      "question": "What happens when you run git commit?",
+      "options": [
+        "Staged changes are pushed to the remote repository",
+        "A snapshot of staged changes is saved locally",
+        "The current branch gets merged into the main branch",
+        "All modified files are automatically added and pushed"
+      ],
+      "answer": 1
+    },
+    {
+      "type": "mcq",
+      "question": "What is Jest used for in a JavaScript project?",
+      "options": [
+        "Bundling modules for the browser",
+        "Managing project dependencies",
+        "Automating deployment pipelines",
+        "Writing and running automated tests"
+      ],
+      "answer": 3
+    },
+    {
+      "type": "integer",
+      "question": "SSH runs on which default port number?",
+      "answer": 22
+    },
+    {
+      "type": "true-false",
+      "question": "Ubuntu is a distribution of Linux.",
+      "answer": true
+    },
+    {
+      "type": "mcq",
+      "question": "What is the purpose of a cron job on a Linux system?",
+      "options": [
+        "Compiling source code into binaries",
+        "Managing version control repositories",
+        "Scheduling tasks to run at specific times",
+        "Orchestrating multi-container applications"
+      ],
+      "answer": 2
+    },
+    {
+      "type": "mcq",
+      "question": "Which git hook executes right before a commit is recorded?",
+      "options": [
+        "post-merge",
+        "pre-commit",
+        "post-commit",
+        "pre-push"
+      ],
+      "answer": 1
+    },
+    {
+      "type": "fill",
+      "question": "To make a bash script executable, you run: chmod +___",
+      "answer": "x",
+      "caseSensitive": true
+    },
+    {
+      "type": "mcq",
+      "question": "In YAML, how is a list item represented?",
+      "options": [
+        "With a semicolon separator",
+        "With a dash followed by a space",
+        "With curly braces around each item",
+        "With a colon followed by a bracket"
+      ],
+      "answer": 1
+    },
+    {
+      "type": "true-false",
+      "question": "GitHub Secrets are printed in plain text inside workflow logs.",
+      "answer": false
+    },
+    {
+      "type": "mcq",
+      "question": "What does a deployment pipeline automate?",
+      "options": [
+        "The process of moving code from repository to production",
+        "The process of writing unit tests for each module",
+        "The process of assigning tasks to team members",
+        "The process of reviewing pull requests manually"
+      ],
+      "answer": 0
+    },
+    {
+      "type": "mcq",
+      "question": "Which command establishes an SSH connection to a remote server?",
+      "options": [
+        "remote user@host",
+        "login user@host",
+        "connect user@host",
+        "ssh user@host"
+      ],
+      "answer": 3
+    }
+  ]
+}

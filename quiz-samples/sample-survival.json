@@ -1,0 +1,63 @@
+{
+  "title": "General Knowledge — Survival Mode",
+  "mode": "survival",
+  "timePerQuestion": 20,
+  "questions": [
+    {
+      "type": "true-false",
+      "question": "The Great Wall of China is visible from space with the naked eye.",
+      "answer": false
+    },
+    {
+      "type": "mcq",
+      "question": "What is the chemical symbol for gold?",
+      "options": ["Go", "Gd", "Au", "Ag"],
+      "answer": 2
+    },
+    {
+      "type": "integer",
+      "question": "How many sides does a hexagon have?",
+      "answer": 6
+    },
+    {
+      "type": "true-false",
+      "question": "Light travels faster than sound.",
+      "answer": true
+    },
+    {
+      "type": "mcq",
+      "question": "Which planet is known as the Red Planet?",
+      "options": ["Venus", "Jupiter", "Saturn", "Mars"],
+      "answer": 3
+    },
+    {
+      "type": "fill",
+      "question": "The capital of Japan is ___.",
+      "answer": "Tokyo",
+      "caseSensitive": false
+    },
+    {
+      "type": "integer",
+      "question": "How many continents are there on Earth?",
+      "answer": 7
+    },
+    {
+      "type": "true-false",
+      "question": "Bats are mammals.",
+      "answer": true
+    },
+    {
+      "type": "mcq",
+      "question": "What is the largest ocean on Earth?",
+      "options": ["Atlantic", "Indian", "Arctic", "Pacific"],
+      "answer": 3
+    },
+    {
+      "type": "match",
+      "question": "Match each country to its capital city.",
+      "left": ["France", "Brazil", "Australia", "Egypt"],
+      "right": ["Paris", "Canberra", "Cairo", "Brasilia"],
+      "answer": [[0, 0], [1, 3], [2, 1], [3, 2]]
+    }
+  ]
+}

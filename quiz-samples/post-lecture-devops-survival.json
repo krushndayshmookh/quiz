@@ -1,0 +1,226 @@
+{
+  "title": "DevOps & CI/CD \u2014 Post-Lecture Survival",
+  "mode": "survival",
+  "timePerQuestion": 25,
+  "questions": [
+    {
+      "type": "mcq",
+      "question": "Which phase is completed first in the Waterfall model?",
+      "options": [
+        "System design and architecture",
+        "Requirements analysis and documentation",
+        "Unit testing and integration",
+        "Code implementation and review"
+      ],
+      "answer": 1
+    },
+    {
+      "type": "true-false",
+      "question": "Agile methodology uses fixed-length iterations called sprints.",
+      "answer": true
+    },
+    {
+      "type": "mcq",
+      "question": "In a CI/CD pipeline, what typically triggers right after code is pushed?",
+      "options": [
+        "An automated build and test sequence runs",
+        "The code is deployed directly to production",
+        "A manual review request is sent to the team",
+        "A standup meeting is scheduled for review"
+      ],
+      "answer": 0
+    },
+    {
+      "type": "fill",
+      "question": "In a GitHub Actions YAML file, the keyword to trigger a workflow on code push is: on: ___",
+      "answer": "push",
+      "caseSensitive": true
+    },
+    {
+      "type": "mcq",
+      "question": "How does Continuous Delivery differ from Continuous Deployment?",
+      "options": [
+        "Delivery needs manual approval before production release",
+        "Delivery is fully automatic, Deployment needs manual approval",
+        "Delivery handles frontend, Deployment handles backend",
+        "There is no meaningful difference between the two"
+      ],
+      "answer": 0
+    },
+    {
+      "type": "mcq",
+      "question": "Which AWS service is best suited for storing static assets like images and stylesheets?",
+      "options": [
+        "RDS for structured asset storage",
+        "S3 for object-based file storage",
+        "EC2 for serving files from an instance",
+        "Lambda for on-demand asset delivery"
+      ],
+      "answer": 1
+    },
+    {
+      "type": "fill",
+      "question": "To check which branch you are currently on in git, you run: git ___",
+      "answer": "branch",
+      "caseSensitive": true
+    },
+    {
+      "type": "mcq",
+      "question": "What is the purpose of the shebang line (#!/bin/bash) in a script?",
+      "options": [
+        "It imports external bash library functions",
+        "It sets the file permissions to executable",
+        "It acts as a comment and gets ignored completely",
+        "It tells the system which interpreter to use"
+      ],
+      "answer": 3
+    },
+    {
+      "type": "integer",
+      "question": "In the cron expression \"30 9 * * 1\", at what minute does the job execute?",
+      "answer": 30
+    },
+    {
+      "type": "mcq",
+      "question": "Which Jest function is specifically used to define a single test case?",
+      "options": [
+        "describe() for grouping related assertions",
+        "expect() for matching output to expected value",
+        "test() or it() for defining one test case",
+        "assert() for validating a boolean condition"
+      ],
+      "answer": 2
+    },
+    {
+      "type": "true-false",
+      "question": "Git hooks are scripts that run automatically before or after certain git events.",
+      "answer": true
+    },
+    {
+      "type": "mcq",
+      "question": "Which AWS CLI command creates a new key pair for EC2 SSH access?",
+      "options": [
+        "aws ec2 create-key-pair --key-name mykey",
+        "ssh-keygen --provider aws --type ec2",
+        "aws iam generate-ssh-key --ec2-access",
+        "ec2-tools create-access-key --ssh-pair"
+      ],
+      "answer": 0
+    },
+    {
+      "type": "mcq",
+      "question": "Where should API keys and credentials be stored in a GitHub Actions workflow?",
+      "options": [
+        "Inside the workflow YAML as plain variables",
+        "In a .env file committed to the repository",
+        "In GitHub Secrets under repository settings",
+        "In a public config file at the repo root"
+      ],
+      "answer": 2
+    },
+    {
+      "type": "fill",
+      "question": "The Linux command to follow a log file in real-time and show the last 50 lines is: tail -f -n ___ /var/log/syslog",
+      "answer": "50",
+      "caseSensitive": false
+    },
+    {
+      "type": "mcq",
+      "question": "Which of the following is valid YAML syntax for a key-value pair?",
+      "options": [
+        "key; value",
+        "key = value",
+        "key -> value",
+        "key: value"
+      ],
+      "answer": 3
+    },
+    {
+      "type": "true-false",
+      "question": "A pre-push git hook can block a push operation if automated tests fail.",
+      "answer": true
+    },
+    {
+      "type": "mcq",
+      "question": "What does the command ssh-keygen -t ed25519 produce?",
+      "options": [
+        "A TLS certificate for HTTPS connections",
+        "A GPG key for signing git commits",
+        "A symmetric encryption key for file transfers",
+        "An SSH key pair using the Ed25519 algorithm"
+      ],
+      "answer": 3
+    },
+    {
+      "type": "mcq",
+      "question": "In a bash script, what value does the variable $? contain?",
+      "options": [
+        "The path to the current home directory",
+        "The total number of arguments passed in",
+        "The process ID of the currently running shell",
+        "The exit status of the last executed command"
+      ],
+      "answer": 3
+    },
+    {
+      "type": "fill",
+      "question": "To install a package on Ubuntu using apt, you run: sudo apt ___",
+      "answer": "install",
+      "caseSensitive": true
+    },
+    {
+      "type": "mcq",
+      "question": "Which DevOps practice ensures every code change is automatically built and tested?",
+      "options": [
+        "Continuous Integration for automated validation",
+        "Continuous Monitoring for production health",
+        "Infrastructure as Code for environment setup",
+        "Continuous Feedback for stakeholder alignment"
+      ],
+      "answer": 0
+    },
+    {
+      "type": "true-false",
+      "question": "An S3 bucket name must be globally unique across all AWS accounts.",
+      "answer": true
+    },
+    {
+      "type": "mcq",
+      "question": "Which git command stages all modified and new files for the next commit?",
+      "options": [
+        "git push --all to send all changes",
+        "git add . to stage everything in the directory",
+        "git commit -a to commit all tracked files",
+        "git stage --all to prepare the working tree"
+      ],
+      "answer": 1
+    },
+    {
+      "type": "integer",
+      "question": "The cron expression \"0 */2 * * *\" runs a job every how many hours?",
+      "answer": 2
+    },
+    {
+      "type": "mcq",
+      "question": "What is the primary purpose of a Dockerfile?",
+      "options": [
+        "To configure a web server like nginx",
+        "To define instructions for building a container image",
+        "To document the API endpoints of a service",
+        "To specify the test suite for a project"
+      ],
+      "answer": 1
+    },
+    {
+      "type": "mcq",
+      "question": "In GitHub Actions, which keyword restricts a workflow to run only on the main branch?",
+      "options": [
+        "target: main under jobs config",
+        "filter: main in the workflow header",
+        "only: main as a top-level directive",
+        "branches: [main] under the on trigger"
+      ],
+      "answer": 3
+    }
+  ]
+}
