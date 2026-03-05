@@ -123,6 +123,8 @@ function uploadQuiz(json: object) {
 }
 
 // ─── Controls ─────────────────────────────────────────────────────────────────
+const controlLoading = ref(false)
+
 function sendControl(action: string) {
   controlError.value = ''
   emit(`admin:${action}`)
@@ -314,7 +316,7 @@ function getAnswerBreakdown(qIdx: number) {
                 @click="sendControl('next')"
               >
                 <i class="la la-step-forward" />
-                {{ phase === 'question' ? 'Lock & Score' : `Next Q (${qIndex + 2}/${totalQ})` }}
+                {{ phase === 'question' ? 'Lock & Score' : (qIndex + 1 >= totalQ ? 'End Quiz & Show Results' : `Next Q (${qIndex + 2}/${totalQ})`) }}
               </button>
 
               <!-- End quiz -->

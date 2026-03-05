@@ -1,0 +1,227 @@
+{
+  "title": "DevOps & CI/CD — Advanced Classic Exam",
+  "mode": "classic",
+  "timePerQuestion": 0,
+  "questions": [
+    {
+      "type": "mcq",
+      "question": "Continuous Delivery and Continuous Deployment differ in one key way. What is it?",
+      "options": [
+        "Continuous Delivery uses Git; Continuous Deployment does not",
+        "Continuous Delivery requires manual approval before production; Continuous Deployment is fully automated",
+        "Continuous Deployment only works with Python applications",
+        "There is no difference — they are the same thing"
+      ],
+      "answer": 1
+    },
+    {
+      "type": "mcq",
+      "question": "In the SDLC, which phase comes IMMEDIATELY after 'Requirements Gathering'?",
+      "options": [
+        "Testing",
+        "Deployment",
+        "System Design",
+        "Maintenance"
+      ],
+      "answer": 2
+    },
+    {
+      "type": "true-false",
+      "question": "The Waterfall model works best for projects where requirements are expected to change frequently during development.",
+      "answer": false
+    },
+    {
+      "type": "mcq",
+      "question": "An Agile team uses sprints. The product owner adds urgent new requirements mid-sprint. What should the team do?",
+      "options": [
+        "Immediately start working on the new requirements",
+        "Add them to the product backlog and consider them for the next sprint",
+        "Cancel the current sprint and start a new one",
+        "Ignore the product owner — sprints are sacred"
+      ],
+      "answer": 1
+    },
+    {
+      "type": "mcq",
+      "question": "An EC2 instance shows 100% CPU usage and the application is unresponsive. Which is NOT a valid short-term solution?",
+      "options": [
+        "Vertically scale by upgrading to a larger instance type",
+        "Add more EC2 instances behind a load balancer",
+        "Optimize the application code causing high CPU usage",
+        "Reduce the instance's CPU cores to lower the percentage"
+      ],
+      "answer": 3
+    },
+    {
+      "type": "mcq",
+      "question": "You store static assets (images, CSS, JS) in S3 and want to serve them to users worldwide with low latency. Which AWS service complements S3?",
+      "options": [
+        "EC2 Auto Scaling",
+        "CloudFront (CDN)",
+        "RDS (Relational Database Service)",
+        "Lambda"
+      ],
+      "answer": 1
+    },
+    {
+      "type": "fill",
+      "question": "The Linux command to display the current working directory is: _____",
+      "answer": "pwd",
+      "caseSensitive": true
+    },
+    {
+      "type": "mcq",
+      "question": "A GitHub Actions workflow has 'runs-on: ubuntu-latest'. What does this specify?",
+      "options": [
+        "The programming language to use",
+        "The operating system of the runner machine that executes the job",
+        "The Git branch to build from",
+        "The deployment target server"
+      ],
+      "answer": 1
+    },
+    {
+      "type": "true-false",
+      "question": "In the SDLC, the maintenance phase is skipped for applications that are deployed to the cloud.",
+      "answer": false
+    },
+    {
+      "type": "mcq",
+      "question": "A developer runs 'git pull' and gets a merge conflict. What has happened?",
+      "options": [
+        "The remote repository has been deleted",
+        "Someone changed the same lines in the same file, and Git cannot auto-merge",
+        "The developer's Git installation is corrupted",
+        "The branch has too many commits"
+      ],
+      "answer": 1
+    },
+    {
+      "type": "integer",
+      "question": "A Jest test suite has 25 tests. 3 fail, 2 are skipped. How many tests pass?",
+      "answer": 20
+    },
+    {
+      "type": "mcq",
+      "question": "You SSH into a production server. Before running any command, you want to verify you are on the correct machine. Which command helps?",
+      "options": [
+        "git status",
+        "hostname",
+        "npm install",
+        "echo 'hello'"
+      ],
+      "answer": 1
+    },
+    {
+      "type": "true-false",
+      "question": "A cron job set to run every hour will execute exactly 24 times per day regardless of system restarts.",
+      "answer": false
+    },
+    {
+      "type": "mcq",
+      "question": "Your bash script starts with '#!/bin/bash'. This line is called a shebang. What is its purpose?",
+      "options": [
+        "It is a comment and serves no functional purpose",
+        "It tells the OS which interpreter to use to execute the script",
+        "It locks the script so only root can run it",
+        "It imports the bash standard library"
+      ],
+      "answer": 1
+    },
+    {
+      "type": "fill",
+      "question": "In YAML, to write a multi-line string that preserves newlines, you use the _____ character (a single punctuation mark).",
+      "answer": "|",
+      "caseSensitive": false
+    },
+    {
+      "type": "mcq",
+      "question": "A developer stores API keys in a public GitHub repo by accident. The keys are used in production. What is the CORRECT order of response?",
+      "options": [
+        "Revoke the keys → Remove from repo → Generate new keys → Add to secrets",
+        "Remove from repo → Hope nobody noticed → Continue using the same keys",
+        "Generate new keys → Delete the entire repository → Create a new repo",
+        "Contact GitHub support → Wait for their response → Then revoke keys"
+      ],
+      "answer": 0
+    },
+    {
+      "type": "mcq",
+      "question": "In a deployment pipeline, what is the purpose of a 'staging' environment?",
+      "options": [
+        "A place to store old versions of the application",
+        "A production-like environment to test changes before real users see them",
+        "A temporary environment that only exists during the build",
+        "A backup server that takes over when production goes down"
+      ],
+      "answer": 1
+    },
+    {
+      "type": "match",
+      "question": "Match each SDLC model with its key characteristic:",
+      "left": ["Waterfall", "Agile", "V-Model", "Spiral"],
+      "right": ["Sequential, no going back", "Iterative sprints, frequent delivery", "Testing planned parallel to each development phase", "Risk-driven, repeated prototyping cycles"],
+      "answer": [[0, 0], [1, 1], [2, 2], [3, 3]]
+    },
+    {
+      "type": "mcq",
+      "question": "You run 'ls -la' and see '-rwxr--r--' for a file. Who can execute this file?",
+      "options": [
+        "Everyone (owner, group, and others)",
+        "Only the file owner",
+        "Owner and group members",
+        "Nobody — the file is not executable"
+      ],
+      "answer": 1
+    },
+    {
+      "type": "true-false",
+      "question": "The 'git stash' command permanently deletes uncommitted changes from your working directory.",
+      "answer": false
+    },
+    {
+      "type": "mcq",
+      "question": "A GitHub Actions workflow needs to deploy to a server using SSH. Where should the private key be stored?",
+      "options": [
+        "In the workflow YAML file directly",
+        "In a GitHub Secret, referenced as an environment variable",
+        "In the repository's README file",
+        "Committed to the repo inside a 'keys/' folder"
+      ],
+      "answer": 1
+    },
+    {
+      "type": "fill",
+      "question": "The git command to see a log of all commits in one line each is: git log --_____",
+      "answer": "oneline",
+      "caseSensitive": true
+    },
+    {
+      "type": "mcq",
+      "question": "AWS charges for EC2. Which billing model lets you pay only for the seconds your instance runs with no long-term commitment?",
+      "options": [
+        "Reserved Instances",
+        "On-Demand",
+        "Spot Instances",
+        "Dedicated Hosts"
+      ],
+      "answer": 1
+    },
+    {
+      "type": "true-false",
+      "question": "Running 'jest --coverage' generates a report showing which lines of source code were executed during tests.",
+      "answer": true
+    },
+    {
+      "type": "mcq",
+      "question": "A cron job runs a backup script nightly. One morning you find the backup is empty (0 bytes). The cron log shows the job ran. What is the MOST likely cause?",
+      "options": [
+        "Cron executed the wrong day of the week",
+        "The script ran but encountered an error (e.g., wrong path, permission denied) — cron ran, the script failed",
+        "The server was off during the night",
+        "Cron jobs cannot create files"
+      ],
+      "answer": 1
+    }
+  ]
+}

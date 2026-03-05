@@ -131,6 +131,27 @@ function setupSocketIO(httpServer: any, adminPassword: string) {
     emitAdminState()
   }
 
+  function emitRevealForQuestion(questionIndex: number) {
+    const q = state.quiz?.questions[questionIndex]
+    if (!q) return
+
+    if (q.type === 'mcq') {
+      const originalAnswer = q.answer as number
+      for (const [id, player] of state.players) {
+        const map = player.shuffleMap[questionIndex]
+        const shuffledAnswer = map
+          ? map.findIndex((orig: number) => orig === originalAnswer)
+          : originalAnswer
+        io.to(id).emit('quiz:reveal', {
+          questionIndex,
+          correctAnswer: shuffledAnswer >= 0 ? shuffledAnswer : originalAnswer,
+        })
+      }
+    } else {
+      io.emit('quiz:reveal', { questionIndex, correctAnswer: q.answer })
+    }
+  }
+
   async function emitQuestionToAll(questionIndex: number, extra: Record<string, unknown> = {}) {
     const q = state.quiz!.questions[questionIndex]
     const safeQ = getSafeQuestion(q)
@@ -258,6 +279,7 @@ function setupSocketIO(httpServer: any, adminPassword: string) {
         await emitQuestionToAll(0)
         startTimer(state.quiz.timePerQuestion ?? 30, () => {
           processAnswersAndScore()
+          emitRevealForQuestion(state.currentQuestionIndex)
           emitLeaderboard()
           state.phase = 'leaderboard'
           emitAdminState()
@@ -276,6 +298,7 @@ function setupSocketIO(httpServer: any, adminPassword: string) {
       if (state.phase === 'question') {
         clearTimer()
         processAnswersAndScore()
+        emitRevealForQuestion(state.currentQuestionIndex)
         emitLeaderboard()
         state.phase = 'leaderboard'
         emitAdminState()
@@ -297,6 +320,7 @@ function setupSocketIO(httpServer: any, adminPassword: string) {
         await emitQuestionToAll(nextIndex)
         startTimer(state.quiz.timePerQuestion ?? 30, () => {
           processAnswersAndScore()
+          emitRevealForQuestion(state.currentQuestionIndex)
           emitLeaderboard()
           state.phase = 'leaderboard'
           emitAdminState()
@@ -314,6 +338,7 @@ function setupSocketIO(httpServer: any, adminPassword: string) {
       if (state.quiz?.mode === 'classic') { socket.emit('admin:error', { message: 'Classic mode cannot lock' }); return }
       clearTimer()
       processAnswersAndScore()
+      emitRevealForQuestion(state.currentQuestionIndex)
       emitLeaderboard()
       state.phase = 'leaderboard'
       emitAdminState()
@@ -325,6 +350,10 @@ function setupSocketIO(httpServer: any, adminPassword: string) {
       state.phase = 'ended'
 
       if (state.quiz?.mode === 'classic') {
+        // Send per-player correct answers for review page (before quiz:ended)
+        for (let qi = 0; qi < state.quiz.questions.length; qi++) {
+          emitRevealForQuestion(qi)
+        }
         const lb = getLeaderboard()
         io.emit('quiz:ended', {
           leaderboard: lb,
@@ -468,6 +497,21 @@ function setupSocketIO(httpServer: any, adminPassword: string) {
         total: [...state.players.values()].filter(p => !p.eliminated).length,
       })
       emitAdminState()
+
+      // Auto-lock when all active players have answered
+      const activePlayers = [...state.players.values()].filter(
+        p => !p.eliminated && !p.spectator && p.connected,
+      )
+      const allAnswered = activePlayers.length > 0
+        && activePlayers.every(p => p.answers[questionIndex] !== undefined)
+      if (allAnswered && state.phase === 'question' && !state.questionLocked) {
+        clearTimer()
+        processAnswersAndScore()
+        emitRevealForQuestion(questionIndex)
+        emitLeaderboard()
+        state.phase = 'leaderboard'
+        emitAdminState()
+      }
     })
 
     // Player submit (classic — all questions at once)

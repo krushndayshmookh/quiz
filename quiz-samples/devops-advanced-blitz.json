@@ -1,0 +1,187 @@
+{
+  "title": "DevOps & CI/CD — Advanced Blitz",
+  "mode": "blitz",
+  "timePerQuestion": 25,
+  "questions": [
+    {
+      "type": "mcq",
+      "question": "A CI/CD pipeline has separate stages: Build → Test → Deploy. The Test stage fails. What happens to Deploy?",
+      "options": [
+        "Deploy runs anyway since stages are independent",
+        "Deploy is skipped because the pipeline stops on failure",
+        "Deploy runs but with a warning flag",
+        "The entire pipeline restarts from Build"
+      ],
+      "answer": 1
+    },
+    {
+      "type": "mcq",
+      "question": "In the Waterfall model, testing revealed a major flaw in the original requirements. Why is this especially costly?",
+      "options": [
+        "Testing tools are expensive to license",
+        "You must go back through all completed phases to fix it",
+        "Waterfall does not allow any testing at all",
+        "The development team has already been disbanded"
+      ],
+      "answer": 1
+    },
+    {
+      "type": "true-false",
+      "question": "In Agile, delivering a working prototype every sprint is more valuable than completing all documentation first.",
+      "answer": true
+    },
+    {
+      "type": "mcq",
+      "question": "An EC2 instance is running but your website returns 'connection timed out'. Which should you check FIRST?",
+      "options": [
+        "Whether the EC2 instance type is powerful enough",
+        "The Security Group inbound rules for port 80/443",
+        "If AWS is having a global outage",
+        "The color scheme of your website"
+      ],
+      "answer": 1
+    },
+    {
+      "type": "mcq",
+      "question": "You uploaded a 2GB video to S3. A week later you upload a new version with the same filename. What happens to the old file?",
+      "options": [
+        "Both versions are kept automatically",
+        "The old file is overwritten (unless versioning is enabled)",
+        "S3 rejects the upload because the file already exists",
+        "The old file is moved to a backup bucket"
+      ],
+      "answer": 1
+    },
+    {
+      "type": "fill",
+      "question": "The Linux command to search for the word 'error' inside all .log files is: _____ 'error' *.log",
+      "answer": "grep",
+      "caseSensitive": true
+    },
+    {
+      "type": "mcq",
+      "question": "A GitHub Actions workflow triggers 'on: push' to main. A developer pushes to a feature branch. Does the workflow run?",
+      "options": [
+        "Yes, 'on: push' triggers on all branches",
+        "No, it only triggers on pushes to main",
+        "Yes, but it runs with reduced permissions",
+        "It depends on the developer's role in the repo"
+      ],
+      "answer": 1
+    },
+    {
+      "type": "true-false",
+      "question": "The SDLC is a fixed set of 5 steps that every company must follow in exact order.",
+      "answer": false
+    },
+    {
+      "type": "mcq",
+      "question": "You ran 'git commit' but forgot to add a file. The commit is already made. What is the BEST way to include the missing file?",
+      "options": [
+        "Delete the repository and start over",
+        "Run 'git add <file>' then 'git commit --amend'",
+        "Push the commit and fix it in the next sprint",
+        "Use 'git revert' to undo all changes"
+      ],
+      "answer": 1
+    },
+    {
+      "type": "mcq",
+      "question": "Jest reports '4 tests passed, 1 snapshot failed'. What does a snapshot failure mean?",
+      "options": [
+        "The test took too long to execute",
+        "The component's rendered output changed compared to the stored snapshot",
+        "Jest could not find the test file",
+        "A syntax error exists in the test"
+      ],
+      "answer": 1
+    },
+    {
+      "type": "integer",
+      "question": "SSH uses port 22 by default. If a firewall blocks all ports except 80, 443, and 8080, how many of these ports can SSH use without its default?",
+      "answer": 3
+    },
+    {
+      "type": "mcq",
+      "question": "A cron expression '0 9 * * 1' runs a job. When does it execute?",
+      "options": [
+        "Every day at 9 AM",
+        "Every Monday at 9 AM",
+        "Every January 9th",
+        "Every 9 minutes on Monday"
+      ],
+      "answer": 1
+    },
+    {
+      "type": "true-false",
+      "question": "Running 'chmod +x script.sh' allows anyone to read the script but only the owner to execute it.",
+      "answer": false
+    },
+    {
+      "type": "mcq",
+      "question": "In YAML, which of these is INVALID syntax?",
+      "options": [
+        "name: \"John Doe\"",
+        "items:\\n  - apple\\n  - banana",
+        "count: 42",
+        "name: John Doe\\n  age: 25"
+      ],
+      "answer": 3
+    },
+    {
+      "type": "mcq",
+      "question": "GitHub Secrets are masked in logs. But a developer writes: 'echo $SECRET | base64'. Is the secret still protected?",
+      "options": [
+        "Yes, GitHub masks all transformations of secrets",
+        "No, the base64-encoded version is not recognized and will be printed in plain text",
+        "GitHub will automatically delete the workflow run",
+        "base64 encoding is impossible in GitHub Actions"
+      ],
+      "answer": 1
+    },
+    {
+      "type": "fill",
+      "question": "To stage ALL modified and new files for a git commit, you run: git add _____",
+      "answer": ".",
+      "caseSensitive": false
+    },
+    {
+      "type": "mcq",
+      "question": "A deployment pipeline automates the path from code to production. Which stage is LEAST likely to be part of it?",
+      "options": [
+        "Running automated tests",
+        "Building the application artifact",
+        "Writing the application source code",
+        "Deploying to a staging environment"
+      ],
+      "answer": 2
+    },
+    {
+      "type": "true-false",
+      "question": "The 'pre-commit' git hook can prevent a developer from committing code that fails linting checks.",
+      "answer": true
+    },
+    {
+      "type": "mcq",
+      "question": "You SSH into a server and run a long process. You close your laptop and the SSH session disconnects. What happens to the process?",
+      "options": [
+        "It keeps running forever in the background",
+        "It receives SIGHUP and terminates (unless run with nohup/tmux/screen)",
+        "SSH automatically reconnects and resumes the process",
+        "The server reboots to clean up orphaned processes"
+      ],
+      "answer": 1
+    },
+    {
+      "type": "mcq",
+      "question": "In Agile, the team consistently fails to complete sprint goals. What is the BEST response?",
+      "options": [
+        "Switch to Waterfall for more structure",
+        "Reduce the scope of upcoming sprints based on actual velocity",
+        "Extend the sprint from 2 weeks to 2 months",
+        "Remove testing from the sprint to save time"
+      ],
+      "answer": 1
+    }
+  ]
+}

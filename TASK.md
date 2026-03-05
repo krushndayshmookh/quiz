@@ -1,95 +1,93 @@
-# TASK: Move Admin to Socket.IO
+# TASK: Blitz UX Improvements + Review Page
 
-## Current State
-- Admin page polls `/api/admin/quiz` every 2 seconds (wasteful)
-- Admin actions (start, next, lock, end, reset) go through `/api/admin/control.post.ts` REST endpoint
-- Admin login goes through `/api/admin/login.post.ts` REST endpoint
-- Upload goes through `/api/admin/upload.post.ts` REST endpoint
+Read all relevant files before making changes. Build must pass (`npx nuxt build`).
 
-## Goal
-Move ALL admin interactions to Socket.IO. Admin connects to the same Socket.IO server but joins an 'admin' room.
+## Bug Fixes
 
-## Changes Needed
+### 1. "Next" button shows Q11 on a 10-question quiz
+In `pages/admin.vue`, the Next button label shows `Next Q (${qIndex + 2}/${totalQ})` even when on the last question's leaderboard. When `qIndex + 2 > totalQ`, it should say "Final Results" instead.
 
-### 1. server/plugins/socket.io.ts — Add admin socket handlers
+### 2. Auto-lock when all players answer
+In `server/plugins/socket.io.ts`, in the `player:answer` handler, after recording the answer and emitting answerCount: check if ALL active (non-eliminated, non-spectator, connected) players have answered the current question. If so, auto-lock: call `clearTimer()`, `processAnswersAndScore()`, `emitLeaderboard()`, set `state.phase = 'leaderboard'`, and `emitAdminState()`. This avoids waiting for the timer when everyone's already answered.
 
-On connection, add these handlers:
+## New Features
 
-```
-socket.on('admin:login', { password }) → validate password, join 'admin' room, emit 'admin:authenticated'
-socket.on('admin:upload', { quiz }) → load quiz into state, emit 'admin:quizLoaded' + 'quiz:loaded' to all
-socket.on('admin:start') → start quiz (same logic as control.post.ts 'start')
-socket.on('admin:next') → next question (same logic as 'next')
-socket.on('admin:lock') → lock current question (same logic as 'lock')
-socket.on('admin:end') → end quiz (same logic as 'end')
-socket.on('admin:reset') → reset state (same logic as 'reset')
-```
+### 3. Live score countdown in blitz (student side)
+In blitz mode, the score decreases as time passes. Students should see their POTENTIAL score ticking down alongside the timer.
 
-Admin should receive real-time events:
-- `admin:state` — full state update (quiz info, phase, players, current question WITH answers, scores)
-- `players:updated` — already broadcast globally
-- `quiz:answerCount` — already sent
-- All quiz events (question, timer, leaderboard, ended)
+In `pages/play.vue`:
+- Add a `potentialScore` computed or ref that calculates: if not yet answered, `Math.round(1000 * (timerRemaining / timerMax))` (same formula as blitz scoring). If already answered, show the locked-in score.
+- Display this prominently above/beside the timer in the blitz question view, like: "1000 pts" counting down to "0 pts"
+- Style it with a large font, maybe coral color when low, mint when high
+- Use the existing timer tick (`quiz:timer` event updates `timerRemaining`) to drive reactivity
 
-Send `admin:state` whenever state changes (after start, next, answer received, timer tick, etc).
+### 4. Show correct answer after lock
+When the question is locked/scored, reveal the correct answer to students.
 
-### 2. Admin state emission helper
+In `server/plugins/socket.io.ts`:
+- After `processAnswersAndScore()`, emit a new event `quiz:reveal` to all players with:
+  ```js
+  { questionIndex, correctAnswer: state.quiz.questions[questionIndex].answer }
+  ```
+- For MCQ, the `correctAnswer` needs to be SHUFFLED per-player (map original answer index through the player's shuffleMap). So iterate players and send individually: `io.to(id).emit('quiz:reveal', { questionIndex, correctAnswer: shuffled })`
+- For true-false, fill, integer: send as-is to all
 
-Create a function `emitAdminState()` that sends to the 'admin' room:
-```js
-function emitAdminState() {
-  io.to('admin').emit('admin:state', {
-    phase: state.phase,
-    quiz: state.quiz ? {
-      title: state.quiz.title,
-      mode: state.quiz.mode,
-      timePerQuestion: state.quiz.timePerQuestion,
-      questions: state.quiz.questions, // WITH answers for admin
-      questionCount: state.quiz.questions.length,
-    } : null,
-    currentQuestionIndex: state.currentQuestionIndex,
-    timerRemaining: state.timerRemaining,
-    questionLocked: state.questionLocked,
-    players: [...state.players.values()].map(p => ({
-      id: p.id, name: p.name, score: p.score,
-      answers: p.answers, connected: p.connected,
-      eliminated: p.eliminated, spectator: p.spectator,
-    })),
-    leaderboard: getLeaderboard(),
-  })
-}
-```
+In `pages/play.vue`:
+- Listen for `quiz:reveal` event
+- Store `revealedAnswer` ref
+- Pass it as `correctAnswer` prop to the current question component (MCQ, TrueFalse, etc.)
+- The components already support `correctAnswer` prop and show correct/wrong styling
 
-Call `emitAdminState()` after every state change.
+### 5. Review page after quiz ends
+Create `pages/review.vue` — a self-contained page that shows the student's performance WITHOUT any socket connection.
 
-### 3. pages/admin.vue — Rewrite to use Socket.IO
+**Data flow:**
+- When `quiz:ended` fires on the client, store review data in `localStorage`:
+  ```js
+  localStorage.setItem('nst-review', JSON.stringify({
+    playerName, quizTitle, mode, score, rank,
+    questions: [...], // the questions they received (classicQuestions or collected from quiz:question events)
+    answers: {...},   // their answers (classicAnswers or collected answers)
+    correctAnswers: {...}, // from quiz:reveal events collected during quiz
+    totalPlayers, timestamp: Date.now()
+  }))
+  ```
+- For blitz/survival: collect questions as they come in (`quiz:question` events) into an array, collect answers, collect reveals
 
-- Remove all `$fetch` / polling logic
-- Connect to Socket.IO on mount
-- Emit `admin:login` with password
-- Listen for `admin:authenticated` / `admin:error`
-- Listen for `admin:state` to update all dashboard state reactively
-- Quiz upload: read file client-side, parse JSON, emit `admin:upload` with the quiz object
-- Control buttons emit: `admin:start`, `admin:next`, `admin:lock`, `admin:end`, `admin:reset`
-- Listen for all quiz events for real-time updates
+**In `pages/play.vue`:**
+- Add refs to accumulate blitz/survival questions and correct answers throughout the quiz
+- On each `quiz:question`, push to `allQuestions` array
+- On each `quiz:reveal`, store in `allCorrectAnswers` record
+- On `quiz:ended`, save everything to localStorage and show a "Review My Answers" button alongside "Back to Home"
 
-### 4. Keep REST endpoints as fallback but they are no longer the primary path
-- Keep `/api/admin/login.post.ts`, `/api/admin/upload.post.ts`, `/api/admin/control.post.ts` working
-- But admin.vue should NOT use them anymore
+**`pages/review.vue` layout:**
+- Read from localStorage on mount
+- If no data, show "No review data available" with a back button
+- Show: player name, quiz title, mode, score, rank, date
+- List ALL questions with:
+  - Question text and type
+  - For MCQ: show all options, highlight selected answer (green if correct, red if wrong), show correct answer
+  - For TrueFalse: show True/False, highlight selection
+  - For Fill/Integer: show their answer vs correct answer
+  - For Match: show their pairs vs correct pairs
+- Summary at top: X/Y correct, score, rank
+- Add a print button that calls `window.print()`
+- Add print-friendly CSS (`@media print`) that hides the button, removes shadows, uses black/white
+- NO socket connection on this page
+- Style consistent with the rest of the app (same pastel theme, cards, borders)
 
-### 5. Important details
-- Admin password validation: use same logic as current `requireAdmin` (check ADMIN_PASSWORD env, default "admin")
-- The `emitQuestionToAll` async function with `fetchSockets()` stays as-is
-- All existing player/spectator socket events remain unchanged
-- Admin socket should NOT be in 'players' or 'active-players' rooms
-- The admin:state should include the full question WITH answers so admin can see correct answers on their dashboard
-- Quiz JSON file upload: parse client-side, send as object over socket (not multipart)
-- Validate quiz structure server-side before accepting
+**In the ended screen (`pages/play.vue`):**
+- Add a button: "Review My Answers" → navigates to `/review`
 
-### 6. Quiz validation on upload
-Validate the quiz JSON has: title (string), mode (classic|blitz|survival), questions (array with at least 1 entry). Each question must have: type, question. Emit `admin:error` if invalid.
+### 6. Admin "Next" button label on last question
+When on the leaderboard of the LAST question (qIndex + 1 >= totalQ), the button should say "End Quiz & Show Results" instead of "Next Q (11/10)".
 
-### Design
-Keep the existing admin.vue design/styling. Just replace the data fetching and action dispatching layer.
+## Important Notes
+- Don't break existing classic mode functionality
+- Don't break existing admin socket events
+- The `emitAdminState()` must be called after auto-lock so admin dashboard updates
+- Timer display on student side already updates via `quiz:timer` socket event
+- MCQ correctAnswer needs per-player shuffle mapping (use player's shuffleMap to convert original index to shuffled index)
+- Keep all existing styling conventions (no emojis, Line Awesome icons, pastel colors, thick borders)
 
-When done, run: openclaw system event --text "Done: Admin migrated to Socket.IO" --mode now
+When done, run: openclaw system event --text "Done: Blitz UX + Review page" --mode now

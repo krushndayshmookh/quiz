@@ -44,6 +44,16 @@ const submitTotal = ref(0)
 const answerCount = ref(0)
 const answerTotal = ref(0)
 
+// ─── Blitz potential score ────────────────────────────────────────────────────
+const lockedBlitzScore = ref<number | null>(null)
+
+// ─── Reveal / review data ─────────────────────────────────────────────────────
+const revealedAnswer = ref<unknown>(null)
+// Blitz/survival: collect all questions and answers for review
+const allQuestions = ref<Array<{ index: number; question: SafeQuestion }>>([])
+const allMyAnswers = ref<Record<number, unknown>>({})
+const allCorrectAnswers = ref<Record<number, unknown>>({})
+
 // ─── Computed ─────────────────────────────────────────────────────────────────
 const timerPercent = computed(() => timerMax.value > 0 ? (timerRemaining.value / timerMax.value) * 100 : 0)
 const timerClass = computed(() => {
@@ -54,6 +64,19 @@ const timerClass = computed(() => {
 const myRank = computed(() => {
   const idx = leaderboard.value.findIndex(e => e.name === playerName.value)
   return idx >= 0 ? idx + 1 : null
+})
+
+const potentialScore = computed(() => {
+  if (mode.value !== 'blitz') return 0
+  if (hasAnswered.value && lockedBlitzScore.value !== null) return lockedBlitzScore.value
+  return Math.max(0, Math.round(1000 * (timerRemaining.value / timerMax.value)))
+})
+
+const potentialScoreClass = computed(() => {
+  const s = potentialScore.value
+  if (s >= 600) return 'score-mint'
+  if (s >= 300) return 'score-yellow'
+  return 'score-coral'
 })
 
 // ─── Socket setup ─────────────────────────────────────────────────────────────
@@ -90,6 +113,11 @@ onMounted(async () => {
     phase.value = 'question'
     myAnswer.value = null
     hasAnswered.value = false
+    revealedAnswer.value = null
+    lockedBlitzScore.value = null
+    allQuestions.value = []
+    allMyAnswers.value = {}
+    allCorrectAnswers.value = {}
   })
 
   on('quiz:allQuestions', (data: any) => {
@@ -117,7 +145,11 @@ onMounted(async () => {
     lastCorrect.value = null
     answerCount.value = 0
     answerTotal.value = 0
+    revealedAnswer.value = null
+    lockedBlitzScore.value = null
     phase.value = 'question'
+    // Collect questions for review
+    allQuestions.value.push({ index: data.index, question: data.question })
   })
 
   on('quiz:timer', (data: any) => {
@@ -133,6 +165,11 @@ onMounted(async () => {
       answerCount.value = data.count
       answerTotal.value = data.total
     }
+  })
+
+  on('quiz:reveal', (data: any) => {
+    revealedAnswer.value = data.correctAnswer
+    allCorrectAnswers.value[data.questionIndex] = data.correctAnswer
   })
 
   on('quiz:submitAck', (data: any) => {
@@ -164,6 +201,26 @@ onMounted(async () => {
     phase.value = 'ended'
     const me = leaderboard.value.find(e => e.name === playerName.value)
     if (me) myScore.value = me.score
+
+    // Build review data
+    const reviewQuestions = mode.value === 'classic'
+      ? classicQuestions.value.map((q, i) => ({ index: i, question: q }))
+      : allQuestions.value
+    const reviewAnswers = mode.value === 'classic' ? classicAnswers.value : allMyAnswers.value
+
+    localStorage.setItem('nst-review', JSON.stringify({
+      playerName: playerName.value,
+      quizTitle: quizTitle.value,
+      mode: mode.value,
+      score: me?.score ?? myScore.value,
+      rank: me?.rank ?? myRank.value,
+      questions: reviewQuestions,
+      answers: reviewAnswers,
+      correctAnswers: allCorrectAnswers.value,
+      totalPlayers: leaderboard.value.length,
+      timestamp: Date.now(),
+    }))
+
     if (me && me.rank <= 3) {
       await nextTick()
       await fireConfetti({ top3: true })
@@ -182,6 +239,11 @@ onMounted(async () => {
     hasSubmittedClassic.value = false
     classicAnswers.value = {}
     myScore.value = 0
+    revealedAnswer.value = null
+    lockedBlitzScore.value = null
+    allQuestions.value = []
+    allMyAnswers.value = {}
+    allCorrectAnswers.value = {}
   })
 
   on('players:updated', (data: any) => {
@@ -207,6 +269,7 @@ onUnmounted(() => {
   off('quiz:timer')
   off('quiz:answerAck')
   off('quiz:answerCount')
+  off('quiz:reveal')
   off('quiz:submitAck')
   off('quiz:submitCount')
   off('quiz:leaderboard')
@@ -220,6 +283,10 @@ onUnmounted(() => {
 function submitAnswer(answer: unknown) {
   if (isSpectator.value || hasAnswered.value || questionLocked.value) return
   myAnswer.value = answer
+  if (mode.value === 'blitz') {
+    lockedBlitzScore.value = Math.max(0, Math.round(1000 * (timerRemaining.value / timerMax.value)))
+  }
+  allMyAnswers.value[currentQIndex.value] = answer
   socketEmit('player:answer', { questionIndex: currentQIndex.value, answer })
 }
 
@@ -309,9 +376,20 @@ const classicAnsweredCount = computed(() => Object.keys(classicAnswers.value).le
             <i class="la la-star" /> {{ myScore.toLocaleString() }}
           </span>
         </div>
-        <Timer v-if="!questionLocked" :remaining="timerRemaining" :max="timerMax" />
-        <div v-else class="locked-badge badge badge-dark">
-          <i class="la la-lock" /> Time's up
+        <div class="play-timer-area">
+          <!-- Potential score countdown for blitz -->
+          <div
+            v-if="mode === 'blitz' && !questionLocked"
+            class="potential-score animate__animated animate__fadeIn"
+            :class="potentialScoreClass"
+          >
+            <i class="la la-bolt" />
+            <span>{{ potentialScore.toLocaleString() }} pts</span>
+          </div>
+          <Timer v-if="!questionLocked" :remaining="timerRemaining" :max="timerMax" />
+          <div v-else class="locked-badge badge badge-dark">
+            <i class="la la-lock" /> Time's up
+          </div>
         </div>
       </div>
 
@@ -325,6 +403,7 @@ const classicAnsweredCount = computed(() => Object.keys(classicAnswers.value).le
             :question-index="currentQIndex"
             :locked="questionLocked || hasAnswered"
             :selected="(myAnswer as number | null)"
+            :correct-answer="(revealedAnswer as number | null)"
             @answer="submitAnswer"
           />
 
@@ -334,6 +413,7 @@ const classicAnsweredCount = computed(() => Object.keys(classicAnswers.value).le
             :question="currentQuestion.question"
             :locked="questionLocked || hasAnswered"
             :selected="(myAnswer as boolean | null)"
+            :correct-answer="(revealedAnswer as boolean | null)"
             @answer="submitAnswer"
           />
 
@@ -343,6 +423,7 @@ const classicAnsweredCount = computed(() => Object.keys(classicAnswers.value).le
             :question="currentQuestion.question"
             :locked="questionLocked || hasAnswered"
             :submitted="hasAnswered"
+            :correct-answer="(revealedAnswer as string | null)"
             @answer="submitAnswer"
           />
 
@@ -351,6 +432,7 @@ const classicAnsweredCount = computed(() => Object.keys(classicAnswers.value).le
             v-else-if="currentQuestion.type === 'integer'"
             :question="currentQuestion.question"
             :locked="questionLocked || hasAnswered"
+            :correct-answer="(revealedAnswer as number | null)"
             @answer="submitAnswer"
           />
 
@@ -361,6 +443,7 @@ const classicAnsweredCount = computed(() => Object.keys(classicAnswers.value).le
             :left="currentQuestion.left ?? []"
             :right="currentQuestion.right ?? []"
             :locked="questionLocked || hasAnswered"
+            :correct-answer="(revealedAnswer as number[][] | null)"
             @answer="submitAnswer"
           />
         </div>
@@ -583,7 +666,10 @@ const classicAnsweredCount = computed(() => Object.keys(classicAnswers.value).le
           <LeaderboardDisplay :entries="leaderboard" :limit="20" />
         </div>
 
-        <button class="btn btn-primary btn-xl btn-block mt-3" @click="$router.push('/')">
+        <button class="btn btn-primary btn-xl btn-block mt-3" @click="$router.push('/review')">
+          <i class="la la-list-alt" /> Review My Answers
+        </button>
+        <button class="btn btn-ghost btn-xl btn-block mt-2" @click="$router.push('/')">
           <i class="la la-home" /> Back to Home
         </button>
       </div>
@@ -659,10 +745,31 @@ const classicAnsweredCount = computed(() => Object.keys(classicAnswers.value).le
   gap: 0.35rem;
   color: var(--purple-dark);
 }
+.play-timer-area {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
 .play-question-body {
   flex: 1;
   padding: 2rem 1.5rem;
 }
+
+/* Potential score */
+.potential-score {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 1.35rem;
+  font-weight: 900;
+  border: 3px solid currentColor;
+  border-radius: 10px;
+  padding: 0.3rem 0.75rem;
+  transition: color 0.3s, border-color 0.3s;
+}
+.score-mint  { color: var(--mint-dark); }
+.score-yellow { color: var(--yellow-dark); }
+.score-coral  { color: var(--coral-dark); }
 
 .answered-badge {
   margin-top: 1.5rem;
