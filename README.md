@@ -12,7 +12,8 @@ Built with Nuxt 3, Socket.IO, Animate.css, and canvas-confetti.
 - **5 Question Types**: MCQ, True/False, Fill in the Blank, Integer, Matching
 - **Real-time**: Socket.IO for live player count, leaderboard updates, timer sync
 - **Admin Dashboard**: Upload quiz JSON, control flow, view responses, download CSV
-- **Leaderboard Page**: Projector-friendly, animated rank changes, confetti on win
+- **Leaderboard Page**: Projector-friendly with QR code join display, animated rank changes, confetti on win
+- **Answer Review**: Post-quiz per-question review with correct answers shown
 - **No Database**: All state is in-memory, single container deployment
 - **Secure**: Answers never sent to clients — server-side validation only
 - **Mobile-first**: Big buttons, large text, works on phones
@@ -32,13 +33,37 @@ npm run dev
 Open:
 - Student join: http://localhost:3000
 - Admin dashboard: http://localhost:3000/admin (default password: `admin`)
-- Leaderboard: http://localhost:3000/leaderboard
+- Leaderboard / projector: http://localhost:3000/leaderboard
+- Usage guide: http://localhost:3000/guide
 
 ### Production with Docker
 
 ```bash
 docker build -t nst-quiz .
 docker run -p 3000:3000 -e ADMIN_PASSWORD=yourpassword nst-quiz
+```
+
+### Kubernetes
+
+The image runs as a non-root user and exposes port 3000. Supply `ADMIN_PASSWORD` via a Kubernetes Secret:
+
+```yaml
+# secret.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: nst-quiz-secret
+type: Opaque
+stringData:
+  ADMIN_PASSWORD: "your-secure-password"
+
+# deployment.yaml (excerpt)
+env:
+  - name: ADMIN_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: nst-quiz-secret
+        key: ADMIN_PASSWORD
 ```
 
 ---

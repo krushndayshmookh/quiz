@@ -13,7 +13,7 @@ const emit = defineEmits<{
 }>()
 
 const inputVal = ref(props.savedAnswer ?? '')
-const hasSubmitted = ref(props.savedAnswer !== undefined)
+const hasSubmitted = ref(props.submitted ?? props.savedAnswer !== undefined)
 
 function submit() {
   if (props.locked || !inputVal.value.trim()) return

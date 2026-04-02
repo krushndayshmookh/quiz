@@ -32,6 +32,12 @@ const classicAnswers = ref<Record<number, unknown>>({})
 const classicCurrentIndex = ref(0)
 const hasSubmittedClassic = ref(false)
 const classicScore = ref<number | null>(null)
+const hideScores = ref(false)
+// Quit confirmation dialog
+const showQuitConfirm = ref(false)
+// Change name dialog
+const showChangeName = ref(false)
+const newNameInput = ref('')
 
 // Post-answer feedback (blitz/survival)
 const lastCorrect = ref<boolean | null>(null)
@@ -124,11 +130,16 @@ onMounted(async () => {
     // Classic mode — all questions at once
     console.log('[play] quiz:allQuestions received, count:', data.questions?.length)
     classicQuestions.value = data.questions
-    totalQuestions.value = data.total
+    totalQuestions.value = data.total ?? data.questions?.length ?? 0
     phase.value = 'question'
     hasSubmittedClassic.value = false
     classicAnswers.value = {}
     classicCurrentIndex.value = 0
+    if (data.hideScores !== undefined) hideScores.value = data.hideScores
+  })
+
+  on('quiz:hideScores', (data: any) => {
+    hideScores.value = data.hide
   })
 
   on('quiz:question', (data: any) => {
@@ -167,6 +178,10 @@ onMounted(async () => {
     }
   })
 
+  on('quiz:locked', () => {
+    questionLocked.value = true
+  })
+
   on('quiz:reveal', (data: any) => {
     revealedAnswer.value = data.correctAnswer
     allCorrectAnswers.value[data.questionIndex] = data.correctAnswer
@@ -202,17 +217,27 @@ onMounted(async () => {
     const me = leaderboard.value.find(e => e.name === playerName.value)
     if (me) myScore.value = me.score
 
+    // For classic mode: server embeds per-player correct answers in quiz:ended
+    if (data.correctAnswers) {
+      for (const [qi, ans] of Object.entries(data.correctAnswers)) {
+        allCorrectAnswers.value[Number(qi)] = ans
+      }
+    }
+
     // Build review data
     const reviewQuestions = mode.value === 'classic'
       ? classicQuestions.value.map((q, i) => ({ index: i, question: q }))
       : allQuestions.value
     const reviewAnswers = mode.value === 'classic' ? classicAnswers.value : allMyAnswers.value
 
+    // Score: prefer server-provided per-player score, then leaderboard, then submitAck
+    const finalScore = data.score ?? me?.score ?? classicScore.value ?? myScore.value
+
     localStorage.setItem('nst-review', JSON.stringify({
       playerName: playerName.value,
       quizTitle: quizTitle.value,
       mode: mode.value,
-      score: me?.score ?? myScore.value,
+      score: finalScore,
       rank: me?.rank ?? myRank.value,
       questions: reviewQuestions,
       answers: reviewAnswers,
@@ -244,6 +269,8 @@ onMounted(async () => {
     allQuestions.value = []
     allMyAnswers.value = {}
     allCorrectAnswers.value = {}
+    hideScores.value = false
+    showQuitConfirm.value = false
   })
 
   on('players:updated', (data: any) => {
@@ -269,6 +296,7 @@ onUnmounted(() => {
   off('quiz:timer')
   off('quiz:answerAck')
   off('quiz:answerCount')
+  off('quiz:locked')
   off('quiz:reveal')
   off('quiz:submitAck')
   off('quiz:submitCount')
@@ -277,6 +305,7 @@ onUnmounted(() => {
   off('quiz:ended')
   off('quiz:reset')
   off('players:updated')
+  off('quiz:hideScores')
 })
 
 // ─── Answer handlers ──────────────────────────────────────────────────────────
@@ -317,6 +346,38 @@ function classicGoTo(qi: number) {
 
 const classicCurrentQ = computed(() => classicQuestions.value[classicCurrentIndex.value] ?? null)
 const classicAnsweredCount = computed(() => Object.keys(classicAnswers.value).length)
+
+// Auto-submit when all questions answered in classic mode
+watch(classicAnsweredCount, (count) => {
+  if (
+    mode.value === 'classic'
+    && totalQuestions.value > 0
+    && count >= totalQuestions.value
+    && !hasSubmittedClassic.value
+    && !isSpectator.value
+  ) {
+    submitClassic()
+  }
+})
+
+function openChangeName() {
+  newNameInput.value = playerName.value
+  showChangeName.value = true
+}
+function confirmChangeName() {
+  const trimmed = newNameInput.value.trim().slice(0, 32)
+  if (!trimmed) return
+  playerName.value = trimmed
+  localStorage.setItem('nst-player-name', trimmed)
+  showChangeName.value = false
+  // Re-join with new name
+  socketEmit('player:join', { name: trimmed })
+}
+
+function confirmQuit() {
+  showQuitConfirm.value = false
+  router.push('/')
+}
 </script>
 
 <template>
@@ -345,9 +406,13 @@ const classicAnsweredCount = computed(() => Object.keys(classicAnswers.value).le
               {{ mode.charAt(0).toUpperCase() + mode.slice(1) }} Mode
             </span>
           </div>
-          <p class="text-muted mt-3">
-            <i class="la la-user" /> You're in as <strong>{{ playerName }}</strong>
-          </p>
+          <div class="player-name-row mt-3">
+            <i class="la la-user" />
+            <strong>{{ playerName }}</strong>
+            <button class="btn btn-sm btn-ghost" @click="openChangeName">
+              <i class="la la-edit" /> Change
+            </button>
+          </div>
           <div class="lobby-waiting mt-3 animate__animated animate__pulse animate__infinite">
             <i class="la la-clock" />
             Waiting for the quiz to start...
@@ -374,6 +439,12 @@ const classicAnsweredCount = computed(() => Object.keys(classicAnswers.value).le
           </span>
           <span class="play-score">
             <i class="la la-star" /> {{ myScore.toLocaleString() }}
+          </span>
+          <span class="player-chip">
+            <i class="la la-user" /> {{ playerName }}
+            <button class="btn-chip-change" @click="openChangeName" title="Change name">
+              <i class="la la-edit" />
+            </button>
           </span>
         </div>
         <div class="play-timer-area">
@@ -476,20 +547,21 @@ const classicAnsweredCount = computed(() => Object.keys(classicAnswers.value).le
             <span class="badge badge-sky"><i class="la la-graduation-cap" /> Classic</span>
           </div>
           <div class="classic-progress-area">
+            <span class="player-chip">
+              <i class="la la-user" /> {{ playerName }}
+              <button class="btn-chip-change" @click="openChangeName" title="Change name">
+                <i class="la la-edit" />
+              </button>
+            </span>
             <span class="text-muted text-sm" style="font-weight:700">
               {{ classicAnsweredCount }}/{{ totalQuestions }} answered
             </span>
-            <button
-              v-if="!hasSubmittedClassic"
-              class="btn btn-mint"
-              :disabled="classicAnsweredCount === 0 || isSpectator"
-              @click="submitClassic"
-            >
-              <i class="la la-paper-plane" /> Submit
-            </button>
-            <span v-else class="badge badge-mint" style="font-size:0.95rem; padding:0.4rem 0.8rem">
+            <span v-if="hasSubmittedClassic" class="badge badge-mint" style="font-size:0.95rem; padding:0.4rem 0.8rem">
               <i class="la la-check-circle" /> Submitted
             </span>
+            <button v-if="!hasSubmittedClassic" class="btn btn-sm btn-coral" @click="showQuitConfirm = true">
+              <i class="la la-sign-out-alt" /> Quit
+            </button>
           </div>
         </div>
       </div>
@@ -511,8 +583,17 @@ const classicAnsweredCount = computed(() => Object.keys(classicAnswers.value).le
         </button>
       </div>
 
+      <div v-if="classicQuestions.length === 0" class="page-center" style="flex:1">
+        <div class="status-screen">
+          <div class="status-icon animate__animated animate__pulse animate__infinite">
+            <i class="la la-spinner la-spin la-3x" />
+          </div>
+          <h2>Loading questions...</h2>
+        </div>
+      </div>
+
       <!-- Single question display -->
-      <div class="container-sm classic-single-body">
+      <div v-else class="container-sm classic-single-body">
         <div v-if="classicCurrentQ" class="card classic-question-card animate__animated animate__fadeIn" :key="classicCurrentIndex">
           <div class="question-number">
             <i class="la la-question-circle" />
@@ -584,21 +665,24 @@ const classicAnsweredCount = computed(() => Object.keys(classicAnswers.value).le
           >
             Next <i class="la la-arrow-right" />
           </button>
-          <button
-            v-else-if="!hasSubmittedClassic"
-            class="btn btn-xl btn-mint"
-            :disabled="classicAnsweredCount === 0 || isSpectator"
-            @click="submitClassic"
-          >
-            <i class="la la-paper-plane" /> Submit All
-          </button>
+          <span v-else-if="!hasSubmittedClassic" class="text-muted text-sm" style="font-weight:700">
+            <i class="la la-info-circle" /> Answer all to auto-submit
+          </span>
+        </div>
+
+        <div v-if="!hasSubmittedClassic && classicAnsweredCount > 0 && !isSpectator" class="auto-submit-hint mt-2">
+          <i class="la la-check-circle" />
+          {{ classicAnsweredCount }}/{{ totalQuestions }} answered
+          <span v-if="classicAnsweredCount < totalQuestions"> — answer all to auto-submit</span>
+          <span v-else class="text-mint-dark"> — submitting...</span>
         </div>
 
         <div v-if="hasSubmittedClassic" class="classic-submitted-banner animate__animated animate__bounceIn">
           <i class="la la-check-circle" style="font-size:1.5rem" />
           <div>
             <div style="font-weight:900; font-size:1.1rem">Submitted!</div>
-            <div class="text-muted">Score: {{ classicScore }} / {{ totalQuestions * 100 }}</div>
+            <div v-if="!hideScores" class="text-muted">Score: {{ classicScore }} / {{ totalQuestions * 100 }}</div>
+            <div v-else class="text-muted"><i class="la la-eye-slash" /> Score hidden until quiz ends</div>
           </div>
         </div>
 
@@ -609,6 +693,7 @@ const classicAnsweredCount = computed(() => Object.keys(classicAnswers.value).le
     </div>
 
     <!-- ─── LEADERBOARD (between questions) ─── -->
+
     <div v-else-if="phase === 'leaderboard'" class="page-center">
       <div class="card leaderboard-card animate__animated animate__fadeInUp">
         <div class="leaderboard-header">
@@ -621,7 +706,7 @@ const classicAnsweredCount = computed(() => Object.keys(classicAnswers.value).le
         <div v-if="myRank" class="my-rank-banner animate__animated animate__bounceIn">
           <i class="la la-user" /> You're ranked <strong>#{{ myRank }}</strong> with {{ myScore.toLocaleString() }} pts
         </div>
-        <LeaderboardDisplay :entries="leaderboard" :limit="10" />
+        <LeaderboardDisplay :entries="leaderboard" :limit="10" :current-player="playerName" />
         <p class="text-center text-muted text-sm mt-3">
           <i class="la la-clock" /> Waiting for next question...
         </p>
@@ -636,7 +721,7 @@ const classicAnsweredCount = computed(() => Object.keys(classicAnswers.value).le
         <p class="mt-2">You got an answer wrong. Spectating the rest...</p>
         <div v-if="leaderboard.length > 0" class="eliminated-lb mt-3">
           <h3><i class="la la-users" /> Remaining Players</h3>
-          <LeaderboardDisplay :entries="leaderboard.filter(e => !e.eliminated)" />
+          <LeaderboardDisplay :entries="leaderboard.filter(e => !e.eliminated)" :current-player="playerName" />
         </div>
       </div>
     </div>
@@ -663,7 +748,7 @@ const classicAnsweredCount = computed(() => Object.keys(classicAnswers.value).le
 
         <div class="mt-3">
           <h3 class="mb-2"><i class="la la-list" /> Final Rankings</h3>
-          <LeaderboardDisplay :entries="leaderboard" :limit="20" />
+          <LeaderboardDisplay :entries="leaderboard" :limit="20" :current-player="playerName" />
         </div>
 
         <button class="btn btn-primary btn-xl btn-block mt-3" @click="$router.push('/review')">
@@ -672,6 +757,47 @@ const classicAnsweredCount = computed(() => Object.keys(classicAnswers.value).le
         <button class="btn btn-ghost btn-xl btn-block mt-2" @click="$router.push('/')">
           <i class="la la-home" /> Back to Home
         </button>
+      </div>
+    </div>
+    <!-- ─── MODALS ─── -->
+
+    <!-- Change name dialog -->
+    <div v-if="showChangeName" class="modal-overlay" @click.self="showChangeName = false">
+      <div class="modal-card animate__animated animate__bounceIn">
+        <h3><i class="la la-edit" /> Change Name</h3>
+        <input
+          v-model="newNameInput"
+          class="input input-xl"
+          placeholder="Enter your name or URN"
+          maxlength="32"
+          @keydown.enter="confirmChangeName"
+          autofocus
+        />
+        <div class="modal-actions mt-3">
+          <button class="btn btn-ghost btn-xl" @click="showChangeName = false">Cancel</button>
+          <button class="btn btn-primary btn-xl" :disabled="!newNameInput.trim()" @click="confirmChangeName">
+            <i class="la la-check" /> Confirm
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quit confirmation dialog -->
+    <div v-if="showQuitConfirm" class="modal-overlay" @click.self="showQuitConfirm = false">
+      <div class="modal-card animate__animated animate__bounceIn">
+        <h3><i class="la la-exclamation-triangle" style="color:var(--coral-dark)" /> Quit Quiz?</h3>
+        <p class="text-muted mt-2 mb-3">
+          You will leave the quiz and your current answers will not be submitted.
+          This cannot be undone.
+        </p>
+        <div class="modal-actions">
+          <button class="btn btn-ghost btn-xl" @click="showQuitConfirm = false">
+            <i class="la la-arrow-left" /> Stay
+          </button>
+          <button class="btn btn-xl" style="background:var(--coral); border-color:var(--coral-dark); color:var(--white)" @click="confirmQuit">
+            <i class="la la-sign-out-alt" /> Leave Quiz
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -753,6 +879,9 @@ const classicAnsweredCount = computed(() => Object.keys(classicAnswers.value).le
 .play-question-body {
   flex: 1;
   padding: 2rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 /* Potential score */
@@ -929,5 +1058,79 @@ const classicAnsweredCount = computed(() => Object.keys(classicAnswers.value).le
   display: flex;
   align-items: center;
   gap: 0.25rem;
+}
+
+/* Player name chip */
+.player-name-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-size: 1rem;
+  color: var(--mid);
+}
+.player-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  background: var(--purple-light);
+  border: 2px solid var(--purple-dark);
+  border-radius: 20px;
+  padding: 0.25rem 0.65rem;
+  color: var(--purple-dark);
+  white-space: nowrap;
+}
+.btn-chip-change {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--purple-dark);
+  padding: 0;
+  font-size: 0.9rem;
+  line-height: 1;
+  opacity: 0.7;
+  transition: opacity 0.15s;
+}
+.btn-chip-change:hover { opacity: 1; }
+
+/* Auto-submit hint */
+.auto-submit-hint {
+  text-align: center;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--mint-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+}
+.text-mint-dark { color: var(--mint-dark); }
+
+/* Modals */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(30,30,46,0.45);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+}
+.modal-card {
+  background: var(--white);
+  border: 3px solid var(--dark);
+  border-radius: 20px;
+  padding: 2rem;
+  max-width: 420px;
+  width: 100%;
+  box-shadow: 8px 8px 0 rgba(30,30,46,0.2);
+}
+.modal-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
 }
 </style>

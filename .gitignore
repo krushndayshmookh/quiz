@@ -11,16 +11,21 @@ node_modules
 
 # Logs
 *.log
+npm-debug.log*
 
 # Misc
 .DS_Store
 .fleet
 .idea
+.vscode
 
-# Local env files
+# Local env files — never commit real secrets
 .env
 .env.local
 .env.*.local
 
-# Results exports
+# Results exports (generated at runtime)
 public/results/*.csv
+
+# OS
+Thumbs.db

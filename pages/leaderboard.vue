@@ -33,6 +33,7 @@ onMounted(async () => {
       title.value = data.title ?? ''
       totalQuestions.value = data.total ?? 0
       if (data.leaderboard) leaderboard.value = data.leaderboard
+      if (data.phase === 'ended') quizEnded.value = true
     }).catch(() => {})
   })
 
@@ -99,6 +100,7 @@ onMounted(async () => {
     title.value = data.title ?? ''
     totalQuestions.value = data.total ?? 0
     if (data.leaderboard) leaderboard.value = data.leaderboard
+    if (data.phase === 'ended') quizEnded.value = true
   }).catch(() => {})
 })
 
@@ -122,6 +124,15 @@ function rankDelta(entry: LeaderboardEntry): number {
 
 const top3 = computed(() => leaderboard.value.filter(e => e.rank <= 3))
 const rest = computed(() => leaderboard.value.filter(e => e.rank > 3))
+
+// Join URL for QR code during lobby
+const joinUrl = ref('')
+onMounted(() => {
+  joinUrl.value = typeof window !== 'undefined' ? window.location.origin : ''
+})
+const qrUrl = computed(() =>
+  joinUrl.value ? `https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=10&data=${encodeURIComponent(joinUrl.value)}` : ''
+)
 </script>
 
 <template>
@@ -150,21 +161,33 @@ const rest = computed(() => leaderboard.value.filter(e => e.rank > 3))
         <div v-if="phase === 'question' && timerRemaining > 0" class="lb-live-timer">
           <Timer :remaining="timerRemaining" :max="30" />
         </div>
-        <NuxtLink to="/" class="btn btn-sm btn-ghost lb-join-link">
+        <!-- Join link only shown while players can still join (idle / lobby) -->
+        <NuxtLink v-if="phase === 'idle' || phase === 'lobby'" to="/" class="btn btn-sm btn-ghost lb-join-link">
           <i class="la la-sign-in-alt" /> Join
         </NuxtLink>
       </div>
     </div>
 
-    <!-- Empty / idle -->
+    <!-- Empty / idle / lobby with QR code -->
     <div v-if="leaderboard.length === 0" class="lb-empty">
       <div class="lb-empty-inner">
-        <i class="la la-clock la-4x" style="color: var(--purple)" />
+        <!-- QR code join area during idle/lobby -->
+        <div v-if="(phase === 'idle' || phase === 'lobby') && qrUrl" class="lb-join-qr animate__animated animate__fadeIn">
+          <div class="qr-card">
+            <img :src="qrUrl" alt="QR code to join" class="qr-img" />
+            <div class="qr-label">
+              <i class="la la-qrcode" /> Scan to join
+            </div>
+            <div class="qr-url">{{ joinUrl }}</div>
+          </div>
+        </div>
+
+        <i v-else class="la la-clock la-4x" style="color: var(--purple)" />
         <h2 class="mt-3">
-          {{ phase === 'idle' ? 'No quiz loaded' : 'Waiting for results...' }}
+          {{ phase === 'idle' ? 'No quiz loaded yet' : phase === 'lobby' ? 'Waiting for players...' : 'Waiting for results...' }}
         </h2>
         <p class="text-muted mt-1">
-          {{ phase === 'idle' ? 'Admin will load a quiz soon.' : 'Leaderboard will appear after the first question.' }}
+          {{ phase === 'idle' ? 'Admin will load a quiz soon.' : phase === 'lobby' ? 'Scan the QR code or visit the URL to join.' : 'Leaderboard will appear after the first question.' }}
         </p>
         <div v-if="players.length > 0" class="mt-3">
           <span class="badge badge-purple" style="font-size:1.2rem; padding:0.5rem 1rem">
@@ -267,6 +290,40 @@ const rest = computed(() => leaderboard.value.filter(e => e.rank > 3))
 .lb-empty { flex: 1; display: flex; align-items: center; justify-content: center; }
 .lb-empty-inner { text-align: center; padding: 3rem; }
 
+/* QR code join display */
+.lb-join-qr { display: flex; justify-content: center; margin-bottom: 1.5rem; }
+.qr-card {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  background: var(--white);
+  border: 4px solid var(--dark);
+  border-radius: 18px;
+  padding: 1.25rem 1.5rem;
+  box-shadow: 6px 6px 0 rgba(30,30,46,0.15);
+}
+.qr-img {
+  width: 220px;
+  height: 220px;
+  border-radius: 10px;
+  display: block;
+}
+.qr-label {
+  margin-top: 0.75rem;
+  font-size: 1.1rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.qr-url {
+  margin-top: 0.3rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--purple-dark);
+  word-break: break-all;
+}
+
 .lb-content {
   flex: 1;
   padding: 2rem 1.5rem;
@@ -289,15 +346,15 @@ const rest = computed(() => leaderboard.value.filter(e => e.rank > 3))
 }
 
 .podium-name {
-  font-size: 1.5rem;
+  font-size: clamp(1.5rem, 3vw, 2.8rem);
   font-weight: 900;
   margin-bottom: 0.5rem;
-  max-width: 200px;
+  max-width: 260px;
   word-break: break-word;
 }
 
 .podium-score {
-  font-size: 1.2rem;
+  font-size: clamp(1.1rem, 2.2vw, 2rem);
   font-weight: 700;
   color: var(--mid);
   margin-bottom: 0.5rem;
@@ -310,17 +367,17 @@ const rest = computed(() => leaderboard.value.filter(e => e.rank > 3))
   justify-content: flex-end;
   border: 3px solid var(--dark);
   border-radius: 12px 12px 0 0;
-  padding: 1rem 2rem 0.5rem;
+  padding: 1.25rem 3vw 0.75rem;
   box-shadow: 5px 5px 0 rgba(30,30,46,0.15);
-  min-width: 120px;
+  min-width: clamp(120px, 18vw, 240px);
 }
 
-.podium-rank { font-size: 2rem; font-weight: 900; }
-.podium-crown { font-size: 2rem; color: var(--yellow-dark); }
+.podium-rank { font-size: clamp(2rem, 4vw, 4rem); font-weight: 900; }
+.podium-crown { font-size: clamp(2rem, 4vw, 4rem); color: var(--yellow-dark); }
 
-.podium-1 .podium-block { background: var(--yellow-light); height: 140px; }
-.podium-2 .podium-block { background: var(--purple-light); height: 110px; }
-.podium-3 .podium-block { background: var(--coral-light); height: 85px; }
+.podium-1 .podium-block { background: var(--yellow-light); height: clamp(140px, 22vh, 220px); }
+.podium-2 .podium-block { background: var(--purple-light); height: clamp(110px, 17vh, 170px); }
+.podium-3 .podium-block { background: var(--coral-light); height: clamp(85px, 13vh, 130px); }
 
 /* Rank delta */
 .rank-delta {
@@ -338,6 +395,36 @@ const rest = computed(() => leaderboard.value.filter(e => e.rank > 3))
 .lb-eliminated { opacity: 0.5; }
 
 .lb-rest { display: flex; flex-direction: column; gap: 0.5rem; }
+
+.lb-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: var(--white);
+  border: 3px solid var(--dark);
+  border-radius: 12px;
+  padding: 0.75rem 1.25rem;
+  box-shadow: 3px 3px 0 rgba(30,30,46,0.12);
+}
+.lb-rank {
+  font-size: clamp(1.1rem, 2vw, 1.6rem);
+  font-weight: 900;
+  min-width: 2.5rem;
+  color: var(--mid);
+}
+.lb-name {
+  flex: 1;
+  font-size: clamp(1rem, 2vw, 1.5rem);
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.lb-score {
+  font-size: clamp(1rem, 2vw, 1.5rem);
+  font-weight: 900;
+  color: var(--purple-dark);
+}
 
 .lb-footer {
   background: var(--white);

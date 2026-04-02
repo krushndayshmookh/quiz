@@ -59,6 +59,7 @@ const barClass = computed(() => {
 
 .timer-bar-wrap {
   flex: 1;
+  min-width: 80px;
   background: rgba(30,30,46,0.1);
   border: 3px solid var(--dark);
   border-radius: 999px;

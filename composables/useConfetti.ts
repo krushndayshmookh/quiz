@@ -1,7 +1,32 @@
+// Reusable low-z-index canvas so confetti doesn't cover card buttons
+let _confettiCanvas: HTMLCanvasElement | null = null
+let _confettiInstance: ((opts?: object) => void) | null = null
+
+function getConfettiInstance() {
+  if (!_confettiCanvas) {
+    _confettiCanvas = document.createElement('canvas')
+    Object.assign(_confettiCanvas.style, {
+      position: 'fixed',
+      top: '0',
+      left: '0',
+      width: '100%',
+      height: '100%',
+      pointerEvents: 'none',
+      zIndex: '50',   // Below UI cards (z-index ~100+) but above page background
+    })
+    document.body.appendChild(_confettiCanvas)
+  }
+  return _confettiCanvas
+}
+
 export function useConfetti() {
   async function fireConfetti(options?: { top3?: boolean }) {
     if (import.meta.server) return
-    const confetti = (await import('canvas-confetti')).default
+    const confettiLib = await import('canvas-confetti')
+    if (!_confettiInstance) {
+      _confettiInstance = confettiLib.create(getConfettiInstance(), { resize: true }) as any
+    }
+    const confetti = _confettiInstance as any
 
     if (options?.top3) {
       // Big celebration for top 3 reveal
@@ -32,7 +57,11 @@ export function useConfetti() {
 
   async function fireSideConfetti() {
     if (import.meta.server) return
-    const confetti = (await import('canvas-confetti')).default
+    const confettiLib = await import('canvas-confetti')
+    if (!_confettiInstance) {
+      _confettiInstance = confettiLib.create(getConfettiInstance(), { resize: true }) as any
+    }
+    const confetti = _confettiInstance as any
     const end = Date.now() + 2000
     const colors = ['#b8a9c9', '#f7a49a', '#a8e6cf']
 

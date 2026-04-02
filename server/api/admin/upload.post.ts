@@ -39,7 +39,6 @@ export default defineEventHandler(async (event) => {
   state.quiz = body
   state.phase = 'lobby'
   state.currentQuestionIndex = -1
-  state.players.clear()
   state.questionLocked = false
 
   const { io, broadcastPlayers } = (global as any).__nstQuizIo ?? {}
@@ -49,6 +48,7 @@ export default defineEventHandler(async (event) => {
       mode: body.mode,
       questionCount: body.questions.length,
     })
+    broadcastPlayers?.()
   }
 
   return { ok: true, title: body.title, mode: body.mode, questions: body.questions.length }

@@ -17,11 +17,13 @@ interface QuizData {
   currentQuestionIndex: number
   timerRemaining: number
   questionLocked: boolean
+  hideScores: boolean
   players: any[]
   playerCount: number
 }
 
 const quizData = ref<QuizData | null>(null)
+const adminStateReady = ref(false)
 
 // ─── Upload ───────────────────────────────────────────────────────────────────
 const uploadError = ref('')
@@ -31,14 +33,28 @@ const uploading = ref(false)
 // ─── Controls ─────────────────────────────────────────────────────────────────
 const controlError = ref('')
 
+// ─── Feature flags ────────────────────────────────────────────────────────────
+const hideScores = ref(false)
+const allowLateJoin = ref(false)
+
 // ─── Results ──────────────────────────────────────────────────────────────────
 const results = ref<any>(null)
 const showResults = ref(false)
 const showAnswers = ref(false)
 
 // ─── Socket setup ─────────────────────────────────────────────────────────────
-function handleAdminState(data: QuizData) {
+function handleAdminState(data: any) {
   quizData.value = data
+  controlLoading.value = false
+  adminStateReady.value = true
+  if (data.hideScores !== undefined) hideScores.value = data.hideScores
+  if (data.allowLateJoin !== undefined) allowLateJoin.value = data.allowLateJoin
+  // Clear stale upload message when quiz is reset back to idle
+  if (data.phase === 'idle') {
+    uploadSuccess.value = ''
+    uploadError.value = ''
+    uploading.value = false
+  }
 }
 
 function handleAdminError(data: { message: string }) {
@@ -46,13 +62,15 @@ function handleAdminError(data: { message: string }) {
   loginError.value = data.message
   loginLoading.value = false
   uploading.value = false
+  controlLoading.value = false
 }
 
 function handleAuthenticated(data: { token: string }) {
   authenticated.value = true
   adminToken.value = data.token
-  sessionStorage.setItem('nst-admin-pw', password.value)
+  sessionStorage.setItem('nst-admin-token', data.token)
   loginError.value = ''
+  controlError.value = ''  // clear any "session expired" banner
   loginLoading.value = false
 }
 
@@ -69,13 +87,11 @@ onMounted(async () => {
   on('admin:error', handleAdminError)
   on('admin:quizLoaded', handleQuizLoaded)
 
-  // Auto-login if password saved in session
-  const saved = sessionStorage.getItem('nst-admin-pw')
+  // Auto-login if token saved in session
+  const saved = sessionStorage.getItem('nst-admin-token')
   if (saved) {
-    password.value = saved
     loginLoading.value = true
-    // Socket is connected (connect() awaited above), safe to emit
-    emit('admin:login', { password: saved })
+    emit('admin:loginWithToken', { token: saved })
   }
 })
 
@@ -96,7 +112,7 @@ function logout() {
   authenticated.value = false
   adminToken.value = null
   quizData.value = null
-  sessionStorage.removeItem('nst-admin-pw')
+  sessionStorage.removeItem('nst-admin-token')
 }
 
 // ─── Upload ───────────────────────────────────────────────────────────────────
@@ -127,6 +143,7 @@ const controlLoading = ref(false)
 
 function sendControl(action: string) {
   controlError.value = ''
+  controlLoading.value = true
   emit(`admin:${action}`)
 }
 
@@ -159,6 +176,24 @@ function downloadCSV() {
     })
 }
 
+// ─── Feature flag toggles ─────────────────────────────────────────────────────
+function toggleHideScores() {
+  hideScores.value = !hideScores.value
+  emit('admin:hideScores', { hide: hideScores.value })
+}
+function toggleAllowLateJoin() {
+  allowLateJoin.value = !allowLateJoin.value
+  emit('admin:allowLateJoin', { allow: allowLateJoin.value })
+}
+
+// ─── Classic mode expand state ────────────────────────────────────────────────
+const expandedClassicQs = ref<number[]>([])
+function toggleClassicQ(qi: number) {
+  const idx = expandedClassicQs.value.indexOf(qi)
+  if (idx === -1) expandedClassicQs.value.push(qi)
+  else expandedClassicQs.value.splice(idx, 1)
+}
+
 // ─── Computed helpers ─────────────────────────────────────────────────────────
 const phase = computed(() => quizData.value?.phase ?? 'idle')
 const currentQ = computed(() => {
@@ -176,6 +211,42 @@ function answerLabel(q: any, answer: unknown): string {
     case 'match': return JSON.stringify(answer)
     default: return String(answer)
   }
+}
+
+// ─── Classic mode stats ───────────────────────────────────────────────────────
+// For each question: how many submitted players got it correct / wrong / unanswered
+const classicPlayerCount = computed(() => quizData.value?.players?.filter((p: any) => !p.spectator).length ?? 0)
+const classicSubmitCount = computed(() => quizData.value?.players?.filter((p: any) => p.submitted && !p.spectator).length ?? 0)
+
+const classicQStats = computed(() => {
+  if (!quizData.value?.quiz?.questions || !quizData.value?.players) return []
+  const questions = quizData.value.quiz.questions
+  const players = quizData.value.players.filter((p: any) => !p.spectator)
+  return questions.map((_: any, qi: number) => {
+    const submitted = players.filter((p: any) => p.submitted)
+    const correct = submitted.filter((p: any) => p.answers?.[qi]?.correct).length
+    const wrong = submitted.filter((p: any) => p.answers?.[qi] !== undefined && !p.answers?.[qi]?.correct).length
+    const unanswered = classicPlayerCount.value - correct - wrong
+    return { correct, wrong, unanswered }
+  })
+})
+
+function classicPlayerBreakdown(qi: number) {
+  if (!quizData.value?.players) return []
+  return quizData.value.players
+    .filter((p: any) => !p.spectator)
+    .map((p: any) => ({
+      name: p.name,
+      submitted: p.submitted,
+      value: p.answers?.[qi]?.answer,
+      correct: p.answers?.[qi]?.correct ?? false,
+      score: p.score,
+    }))
+    .sort((a: any, b: any) => {
+      // submitted first, then by name
+      if (a.submitted !== b.submitted) return a.submitted ? -1 : 1
+      return a.name.localeCompare(b.name)
+    })
 }
 
 function getAnswerBreakdown(qIdx: number) {
@@ -227,14 +298,22 @@ function getAnswerBreakdown(qIdx: number) {
           <div class="flex items-center gap-2">
             <div class="admin-logo-sm"><i class="la la-bolt" /></div>
             <h2 class="font-black">NST Quiz Admin</h2>
-            <span class="badge" :class="`badge-${phase === 'idle' ? 'dark' : phase === 'lobby' ? 'sky' : phase === 'question' ? 'yellow' : phase === 'leaderboard' ? 'purple' : phase === 'ended' ? 'mint' : 'dark'}`">
+            <span v-if="adminStateReady" class="badge" :class="`badge-${phase === 'idle' ? 'dark' : phase === 'lobby' ? 'sky' : phase === 'question' ? 'yellow' : phase === 'leaderboard' ? 'purple' : phase === 'ended' ? 'mint' : 'dark'}`">
               <i :class="`la la-${phase === 'idle' ? 'circle' : phase === 'lobby' ? 'users' : phase === 'question' ? 'play-circle' : phase === 'leaderboard' ? 'trophy' : 'flag-checkered'}`" />
               {{ phase }}
             </span>
+            <span v-else class="badge badge-dark">
+              <i class="la la-spinner la-spin" /> loading...
+            </span>
           </div>
-          <button class="btn btn-ghost btn-sm" @click="logout">
-            <i class="la la-sign-out-alt" /> Logout
-          </button>
+          <div class="flex gap-1">
+            <NuxtLink to="/guide" class="btn btn-ghost btn-sm" target="_blank">
+              <i class="la la-book" /> Guide
+            </NuxtLink>
+            <button class="btn btn-ghost btn-sm" @click="logout">
+              <i class="la la-sign-out-alt" /> Logout
+            </button>
+          </div>
         </div>
       </div>
 
@@ -329,16 +408,16 @@ function getAnswerBreakdown(qIdx: number) {
                 <i class="la la-stop-circle" /> End Quiz
               </button>
 
-              <!-- Results / Download -->
+              <!-- Results / Download — only when quiz is complete -->
               <button
-                v-if="phase === 'ended' || phase === 'question' || phase === 'leaderboard'"
+                v-if="phase === 'ended'"
                 class="btn btn-xl btn-yellow"
                 @click="loadResults"
               >
                 <i class="la la-chart-bar" /> View Results
               </button>
               <button
-                v-if="phase === 'ended' || phase === 'question' || phase === 'leaderboard'"
+                v-if="phase === 'ended'"
                 class="btn btn-xl btn-primary"
                 @click="downloadCSV"
               >
@@ -355,10 +434,34 @@ function getAnswerBreakdown(qIdx: number) {
                 <i class="la la-redo" /> Reset Quiz
               </button>
             </div>
+
+            <!-- Feature flags -->
+            <div v-if="phase === 'lobby' || phase === 'question'" class="flags-row mt-3">
+              <span class="text-sm" style="font-weight:700; color:var(--mid)"><i class="la la-sliders-h" /> Flags</span>
+              <button
+                v-if="quizData?.quiz?.mode === 'classic'"
+                class="btn btn-sm flag-btn"
+                :class="hideScores ? 'flag-on' : 'flag-off'"
+                :title="hideScores ? 'Scores hidden from students' : 'Students can see their score after submitting'"
+                @click="toggleHideScores"
+              >
+                <i :class="`la la-${hideScores ? 'eye-slash' : 'eye'}`" />
+                Hide Scores
+              </button>
+              <button
+                class="btn btn-sm flag-btn"
+                :class="allowLateJoin ? 'flag-on' : 'flag-off'"
+                :title="allowLateJoin ? 'Late joiners can participate' : 'Late joiners become spectators'"
+                @click="toggleAllowLateJoin"
+              >
+                <i :class="`la la-${allowLateJoin ? 'user-plus' : 'user-slash'}`" />
+                Late Join
+              </button>
+            </div>
           </div>
 
-          <!-- ─── Current Question Card ─── -->
-          <div v-if="currentQ && (phase === 'question' || phase === 'leaderboard')" class="card mb-3 animate__animated animate__fadeIn">
+          <!-- ─── Current Question Card (Blitz / Survival) ─── -->
+          <div v-if="currentQ && (phase === 'question' || phase === 'leaderboard') && quizData?.quiz?.mode !== 'classic'" class="card mb-3 animate__animated animate__fadeIn">
             <div class="flex items-center justify-between mb-2">
               <h3>
                 <i class="la la-question-circle" /> Q{{ qIndex + 1 }}/{{ totalQ }}
@@ -366,7 +469,7 @@ function getAnswerBreakdown(qIdx: number) {
                   <i class="la la-lock" /> Locked
                 </span>
               </h3>
-              <div v-if="phase === 'question' && quizData?.quiz?.mode !== 'classic'" class="timer-display-admin">
+              <div v-if="phase === 'question'" class="timer-display-admin">
                 <i class="la la-clock" />
                 <span>{{ quizData?.timerRemaining ?? 0 }}s</span>
               </div>
@@ -374,7 +477,6 @@ function getAnswerBreakdown(qIdx: number) {
 
             <p class="question-text" style="font-size: 1.2rem">{{ currentQ.question }}</p>
 
-            <!-- Show correct answer to admin -->
             <div class="answer-key mt-2">
               <strong><i class="la la-key" /> Answer: </strong>
               <span class="answer-reveal">
@@ -393,8 +495,7 @@ function getAnswerBreakdown(qIdx: number) {
               </span>
             </div>
 
-            <!-- Response breakdown -->
-            <div v-if="quizData?.quiz?.mode !== 'classic'" class="response-breakdown mt-3">
+            <div class="response-breakdown mt-3">
               <div class="flex items-center justify-between mb-1">
                 <strong class="text-sm"><i class="la la-poll" /> Responses</strong>
                 <span class="text-sm text-muted">
@@ -411,6 +512,86 @@ function getAnswerBreakdown(qIdx: number) {
                   <i :class="`la la-${p.value !== undefined ? (p.correct ? 'check-circle' : 'times-circle') : 'minus-circle'}`" />
                   <span class="flex-1">{{ p.name }}</span>
                   <span class="text-sm">{{ answerLabel(currentQ, p.value) }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ─── Classic Mode: All Questions + Live Performance ─── -->
+          <div v-if="quizData?.quiz?.mode === 'classic' && phase === 'question'" class="card mb-3 animate__animated animate__fadeIn">
+            <div class="flex items-center justify-between mb-3">
+              <h3><i class="la la-graduation-cap" /> Live Performance</h3>
+              <div class="flex items-center gap-2">
+                <span class="badge badge-sky">
+                  <i class="la la-users" />
+                  {{ classicSubmitCount }}/{{ classicPlayerCount }} submitted
+                </span>
+                <!-- Submit progress bar -->
+                <div class="submit-progress-bar">
+                  <div
+                    class="submit-progress-fill"
+                    :style="{ width: classicPlayerCount > 0 ? (classicSubmitCount / classicPlayerCount * 100) + '%' : '0%' }"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <!-- Per-question breakdown -->
+            <div class="classic-all-questions">
+              <div
+                v-for="(q, qi) in quizData.quiz.questions"
+                :key="qi"
+                class="classic-q-row"
+              >
+                <!-- Question header -->
+                <div class="classic-q-header" @click="toggleClassicQ(qi)">
+                  <div class="classic-q-header-left">
+                    <span class="classic-q-num">Q{{ qi + 1 }}</span>
+                    <span class="badge badge-dark" style="font-size:0.75rem; text-transform:capitalize">{{ q.type }}</span>
+                    <span class="classic-q-text">{{ q.question }}</span>
+                  </div>
+                  <div class="classic-q-header-right">
+                    <!-- Answer count bar for submitted players -->
+                    <span class="text-sm text-muted" style="white-space:nowrap">
+                      <i class="la la-check-circle" style="color:var(--mint-dark)" />
+                      {{ classicQStats[qi]?.correct ?? 0 }}
+                      <i class="la la-times-circle" style="color:var(--coral-dark)" />
+                      {{ classicQStats[qi]?.wrong ?? 0 }}
+                      <i class="la la-minus-circle" style="color:var(--mid)" />
+                      {{ classicQStats[qi]?.unanswered ?? 0 }}
+                    </span>
+                    <span class="answer-reveal" style="font-size:0.8rem; max-width:180px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis">
+                      <i class="la la-key" />
+                      <template v-if="q.type === 'mcq'">{{ q.options?.[q.answer] }}</template>
+                      <template v-else-if="q.type === 'true-false'">{{ q.answer ? 'True' : 'False' }}</template>
+                      <template v-else-if="q.type === 'match'">{{ q.left?.map((l: string, i: number) => `${l}→${q.right?.[q.answer?.[i]?.[1]] ?? '?'}`).join(', ') }}</template>
+                      <template v-else>{{ q.answer }}</template>
+                    </span>
+                    <i :class="`la la-${expandedClassicQs.includes(qi) ? 'chevron-up' : 'chevron-down'}`" style="color:var(--mid)" />
+                  </div>
+                </div>
+
+                <!-- Expanded player responses -->
+                <div v-if="expandedClassicQs.includes(qi)" class="classic-q-responses animate__animated animate__fadeIn">
+                  <div
+                    v-for="p in classicPlayerBreakdown(qi)"
+                    :key="p.name"
+                    class="response-row"
+                    :class="{
+                      'resp-correct': p.submitted && p.correct,
+                      'resp-wrong': p.submitted && p.value !== undefined && !p.correct,
+                    }"
+                    style="font-size:0.875rem"
+                  >
+                    <i :class="`la la-${!p.submitted ? 'clock' : p.value !== undefined ? (p.correct ? 'check-circle' : 'times-circle') : 'minus-circle'}`" />
+                    <span class="flex-1">{{ p.name }}</span>
+                    <span class="text-sm text-muted">
+                      <template v-if="!p.submitted">not submitted yet</template>
+                      <template v-else-if="p.value === undefined">—</template>
+                      <template v-else>{{ answerLabel(q, p.value) }}</template>
+                    </span>
+                    <span v-if="p.submitted" class="badge badge-dark" style="font-size:0.7rem">{{ p.score }}pts</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -619,4 +800,94 @@ function getAnswerBreakdown(qIdx: number) {
   font-weight: 600;
   cursor: pointer;
 }
+
+/* Classic mode live performance */
+.classic-all-questions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.classic-q-row {
+  border: 2px solid rgba(30,30,46,0.1);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.classic-q-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.7rem 1rem;
+  cursor: pointer;
+  background: var(--light);
+  user-select: none;
+  flex-wrap: wrap;
+}
+.classic-q-header:hover { background: var(--purple-light); }
+.classic-q-header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+  min-width: 0;
+}
+.classic-q-header-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-shrink: 0;
+}
+.classic-q-num {
+  font-weight: 900;
+  font-size: 0.9rem;
+  background: var(--purple);
+  color: var(--white);
+  border-radius: 6px;
+  padding: 0.15rem 0.5rem;
+  flex-shrink: 0;
+}
+.classic-q-text {
+  font-size: 0.875rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 260px;
+}
+.classic-q-responses {
+  border-top: 2px solid rgba(30,30,46,0.08);
+  padding: 0.5rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  background: var(--white);
+}
+
+/* Submission progress bar */
+.submit-progress-bar {
+  width: 80px;
+  height: 8px;
+  background: rgba(30,30,46,0.1);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.submit-progress-fill {
+  height: 100%;
+  background: var(--mint-dark);
+  border-radius: 4px;
+  transition: width 0.4s ease;
+}
+
+/* Feature flags row */
+.flags-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  padding-top: 0.85rem;
+  border-top: 2px solid rgba(30,30,46,0.08);
+}
+.flag-btn { border-radius: 20px; font-size: 0.8rem; padding: 0.3rem 0.75rem; }
+.flag-on  { background: var(--purple-light); border-color: var(--purple-dark); color: var(--purple-dark); font-weight: 700; }
+.flag-off { background: var(--light); border-color: rgba(30,30,46,0.2); color: var(--mid); }
 </style>

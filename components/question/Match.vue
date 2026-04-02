@@ -45,6 +45,15 @@ function getRightPairIndex(rightIdx: number): number | null {
 }
 
 const allMatched = computed(() => matches.value.every(m => m !== null))
+const anyMatched = computed(() => matches.value.some(m => m !== null))
+const matchedCount = computed(() => matches.value.filter(m => m !== null).length)
+
+// Auto-submit when all pairs matched
+watch(allMatched, (val) => {
+  if (val && !hasSubmitted.value && !props.locked) {
+    submit()
+  }
+})
 
 function selectLeft(idx: number) {
   if (props.locked || hasSubmitted.value) return
@@ -73,7 +82,7 @@ function selectRight(rightIdx: number) {
 }
 
 function submit() {
-  if (!allMatched.value || hasSubmitted.value) return
+  if (!anyMatched.value || hasSubmitted.value) return
   hasSubmitted.value = true
   const pairs = matches.value
     .map((r, l) => [l, r as number])
@@ -82,6 +91,7 @@ function submit() {
 }
 
 function getRightClass(rightIdx: number) {
+  if (props.locked && !props.correctAnswer) return 'disabled'
   if (props.correctAnswer) {
     // Check if this right was correctly matched
     const leftForRight = matches.value.findIndex(m => m === rightIdx)
@@ -96,6 +106,7 @@ function getRightClass(rightIdx: number) {
 }
 
 function getLeftClass(leftIdx: number) {
+  if (props.locked && !props.correctAnswer) return 'disabled'
   if (props.correctAnswer) {
     const myRight = matches.value[leftIdx]
     if (myRight === null) return 'disabled'
@@ -109,7 +120,7 @@ function getLeftClass(leftIdx: number) {
 }
 
 function getLeftStyle(leftIdx: number) {
-  if (props.correctAnswer) return {}
+  if (props.correctAnswer || props.locked) return {}
   const pi = getPairIndex(leftIdx)
   if (pi !== null) {
     const color = pairColors[pi % pairColors.length]
@@ -120,7 +131,7 @@ function getLeftStyle(leftIdx: number) {
 }
 
 function getRightStyle(rightIdx: number) {
-  if (props.correctAnswer) return {}
+  if (props.correctAnswer || props.locked) return {}
   const pi = getRightPairIndex(rightIdx)
   if (pi !== null) {
     const color = pairColors[pi % pairColors.length]
@@ -138,8 +149,9 @@ function getMatchedRightLabel(leftIdx: number) {
 <template>
   <div class="match-wrap">
     <div class="question-text animate__animated animate__fadeInDown">{{ question }}</div>
-    <p class="text-muted text-sm mb-2">
+    <p v-if="!hasSubmitted && !locked" class="text-muted text-sm mb-2">
       <i class="la la-info-circle" /> Select a left item, then a right item to match them.
+      All {{ left.length }} pairs matched = auto-submitted.
     </p>
 
     <div class="match-columns">
@@ -175,16 +187,22 @@ function getMatchedRightLabel(leftIdx: number) {
       </div>
     </div>
 
-    <!-- Summary of current matches -->
-    <div v-if="allMatched && !hasSubmitted" class="match-summary animate__animated animate__fadeIn">
-      <div v-for="(r, l) in matches" :key="l" class="match-pair" :style="{ background: pairColors[l % pairColors.length].bg, borderLeft: `4px solid ${pairColors[l % pairColors.length].border}`, padding: '0.5rem 0.75rem', borderRadius: '8px' }">
-        <span>{{ left[l] }}</span>
-        <i class="la la-arrows-alt-h" />
-        <span>{{ right[r!] }}</span>
+    <!-- Summary of current matches + submit button (available when ≥1 pair matched, not all matched yet) -->
+    <div v-if="anyMatched && !hasSubmitted && !allMatched" class="match-summary animate__animated animate__fadeIn">
+      <div v-for="(r, l) in matches" :key="l" class="match-pair" :style="r !== null ? { background: pairColors[l % pairColors.length].bg, borderLeft: `4px solid ${pairColors[l % pairColors.length].border}`, padding: '0.5rem 0.75rem', borderRadius: '8px' } : {}">
+        <template v-if="r !== null">
+          <span>{{ left[l] }}</span>
+          <i class="la la-arrows-alt-h" />
+          <span>{{ right[r] }}</span>
+        </template>
       </div>
-      <button class="btn btn-xl btn-mint mt-3" @click="submit">
-        <i class="la la-check" /> Confirm Matches
+      <button class="btn btn-xl btn-sky mt-3" @click="submit">
+        <i class="la la-check" />
+        Submit {{ matchedCount }}/{{ left.length }} Pairs (Partial)
       </button>
+      <p class="text-muted text-sm mt-1">
+        <i class="la la-info-circle" /> Match all {{ left.length }} pairs to auto-submit, or submit partial for partial credit.
+      </p>
     </div>
 
     <div v-if="hasSubmitted" class="mt-2 animate__animated animate__bounceIn" style="font-weight:700; color: var(--mint-dark)">
@@ -223,7 +241,7 @@ function getMatchedRightLabel(leftIdx: number) {
   min-height: 56px;
 }
 
-.match-item.selected { background: var(--purple); }
+.match-item.selected { background: var(--purple); color: var(--white); }
 .match-item.matched  { background: var(--sky-light); border-color: var(--sky-dark); }
 .match-item.correct  { background: var(--mint); border-color: var(--mint-dark); }
 .match-item.wrong    { background: var(--coral); border-color: var(--coral-dark); }

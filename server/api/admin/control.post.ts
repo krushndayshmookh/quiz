@@ -11,7 +11,7 @@ export default defineEventHandler(async (event) => {
   const { action } = body
 
   const helpers = (global as any).__nstQuizIo ?? {}
-  const { io, startTimer, processAnswersAndScore, emitLeaderboard, broadcastPlayers } = helpers
+  const { io, startTimer, processAnswersAndScore, emitLeaderboard, emitRevealForQuestion, emitAdminState, revealAndTransition, broadcastPlayers } = helpers
 
   if (!io) throw createError({ statusCode: 503, message: 'Socket server not ready' })
 
@@ -80,9 +80,7 @@ export default defineEventHandler(async (event) => {
         state.questionLocked = false
         emitQuestionToAll(0)
         startTimer(state.quiz.timePerQuestion ?? 30, () => {
-          processAnswersAndScore()
-          emitLeaderboard()
-          state.phase = 'leaderboard'
+          revealAndTransition(state.currentQuestionIndex)
         })
       }
       break
@@ -95,11 +93,9 @@ export default defineEventHandler(async (event) => {
       const nextIndex = state.currentQuestionIndex + 1
 
       if (state.phase === 'question') {
-        // Lock current question early, process scores
+        // Lock current question early, process scores, show reveal then leaderboard
         clearTimer()
-        processAnswersAndScore()
-        emitLeaderboard()
-        state.phase = 'leaderboard'
+        revealAndTransition(state.currentQuestionIndex)
         break
       }
 
@@ -109,6 +105,7 @@ export default defineEventHandler(async (event) => {
           state.phase = 'ended'
           const lb = state.quiz.mode === 'survival' ? getFullLeaderboard() : getLeaderboard()
           io.emit('quiz:ended', { leaderboard: lb, title: state.quiz.title, mode: state.quiz.mode })
+          emitAdminState()
           break
         }
 
@@ -117,10 +114,9 @@ export default defineEventHandler(async (event) => {
         state.phase = 'question'
         emitQuestionToAll(nextIndex)
         startTimer(state.quiz.timePerQuestion ?? 30, () => {
-          processAnswersAndScore()
-          emitLeaderboard()
-          state.phase = 'leaderboard'
+          revealAndTransition(state.currentQuestionIndex)
         })
+        emitAdminState()
         break
       }
 

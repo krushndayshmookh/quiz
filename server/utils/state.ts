@@ -47,6 +47,8 @@ export interface QuizState {
   adminToken: string | null
   io: SocketIOServer | null
   questionLocked: boolean
+  hideScores: boolean
+  allowLateJoin: boolean
 }
 
 export const state: QuizState = {
@@ -60,6 +62,8 @@ export const state: QuizState = {
   adminToken: null,
   io: null,
   questionLocked: false,
+  hideScores: false,
+  allowLateJoin: false,
 }
 
 // Strip answer fields from a question before sending to clients
@@ -140,9 +144,18 @@ export function validateAnswer(questionIndex: number, playerAnswer: unknown): bo
       const sg = sortPairs(given)
       return se.every((pair, i) => pair[0] === sg[i]?.[0] && pair[1] === sg[i]?.[1])
     }
-    default:
-      return false
   }
+}
+
+// Returns how many pairs in a match answer are correct (for partial scoring)
+export function countCorrectMatchPairs(questionIndex: number, playerAnswer: unknown): number {
+  if (!state.quiz) return 0
+  const question = state.quiz.questions[questionIndex]
+  if (!question || question.type !== 'match') return 0
+  const expected = question.answer as number[][]
+  const given = playerAnswer as number[][]
+  if (!Array.isArray(given)) return 0
+  return given.filter(([gl, gr]) => expected.some(([el, er]) => el === gl && er === gr)).length
 }
 
 // Sorted leaderboard (public-safe, no answer data)
@@ -203,4 +216,6 @@ export function resetState() {
   state.questionStartTime = 0
   state.players.clear()
   state.questionLocked = false
+  state.hideScores = false
+  state.allowLateJoin = false
 }

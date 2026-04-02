@@ -66,6 +66,7 @@ function btnClass(idx: number) {
 
 .answer-btn {
   background: var(--bg, var(--white));
+  animation-duration: 0.35s;
 }
 .answer-btn.selected {
   background: var(--purple) !important;
