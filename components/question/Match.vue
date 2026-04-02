@@ -48,20 +48,33 @@ const allMatched = computed(() => matches.value.every(m => m !== null))
 const anyMatched = computed(() => matches.value.some(m => m !== null))
 const matchedCount = computed(() => matches.value.filter(m => m !== null).length)
 
-// Auto-submit when all pairs matched
+// In classic/allowChange mode: auto-save on every match change (no lock)
+watch(matches, () => {
+  if (props.allowChange && !props.locked && anyMatched.value) {
+    const pairs = matches.value
+      .map((r, l) => [l, r as number])
+      .filter(([, r]) => r !== null) as number[][]
+    emit('answer', pairs)
+  }
+}, { deep: true })
+
+// In blitz/survival mode: auto-submit when all pairs matched
 watch(allMatched, (val) => {
-  if (val && !hasSubmitted.value && !props.locked) {
+  if (val && !hasSubmitted.value && !props.locked && !props.allowChange) {
     submit()
   }
 })
 
 function selectLeft(idx: number) {
-  if (props.locked || hasSubmitted.value) return
+  if (props.locked) return
+  // In classic mode (allowChange), always allow re-selecting; in blitz lock after submit
+  if (!props.allowChange && hasSubmitted.value) return
   selectedLeft.value = selectedLeft.value === idx ? null : idx
 }
 
 function selectRight(rightIdx: number) {
-  if (props.locked || hasSubmitted.value) return
+  if (props.locked) return
+  if (!props.allowChange && hasSubmitted.value) return
   if (selectedLeft.value === null) return
 
   const leftIdx = selectedLeft.value
@@ -149,9 +162,10 @@ function getMatchedRightLabel(leftIdx: number) {
 <template>
   <div class="match-wrap">
     <div class="question-text animate__animated animate__fadeInDown">{{ question }}</div>
-    <p v-if="!hasSubmitted && !locked" class="text-muted text-sm mb-2">
-      <i class="la la-info-circle" /> Select a left item, then a right item to match them.
-      All {{ left.length }} pairs matched = auto-submitted.
+    <p v-if="!locked" class="text-muted text-sm mb-2">
+      <i class="la la-info-circle" />
+      <span v-if="allowChange">Select a left item, then a right item to match</span>
+      <span v-else>Select a left item, then a right item to match them. All {{ left.length }} pairs matched = auto-submitted.</span>
     </p>
 
     <div class="match-columns">
@@ -187,8 +201,22 @@ function getMatchedRightLabel(leftIdx: number) {
       </div>
     </div>
 
-    <!-- Summary of current matches + submit button (available when ≥1 pair matched, not all matched yet) -->
-    <div v-if="anyMatched && !hasSubmitted && !allMatched" class="match-summary animate__animated animate__fadeIn">
+    <!-- Classic mode: show current matches summary (always visible while working) -->
+    <div v-if="allowChange && anyMatched && !locked" class="match-summary animate__animated animate__fadeIn">
+      <div v-for="(r, l) in matches" :key="l" class="match-pair" :style="r !== null ? { background: pairColors[l % pairColors.length].bg, borderLeft: `4px solid ${pairColors[l % pairColors.length].border}`, padding: '0.5rem 0.75rem', borderRadius: '8px' } : {}">
+        <template v-if="r !== null">
+          <span>{{ left[l] }}</span>
+          <i class="la la-arrows-alt-h" />
+          <span>{{ right[r] }}</span>
+        </template>
+      </div>
+      <p class="text-muted text-sm mt-1">
+        <i class="la la-save" style="color: var(--mint-dark)" /> {{ matchedCount }}/{{ left.length }} pairs saved
+      </p>
+    </div>
+
+    <!-- Blitz/survival mode: partial submit UI -->
+    <div v-else-if="!allowChange && anyMatched && !hasSubmitted && !allMatched" class="match-summary animate__animated animate__fadeIn">
       <div v-for="(r, l) in matches" :key="l" class="match-pair" :style="r !== null ? { background: pairColors[l % pairColors.length].bg, borderLeft: `4px solid ${pairColors[l % pairColors.length].border}`, padding: '0.5rem 0.75rem', borderRadius: '8px' } : {}">
         <template v-if="r !== null">
           <span>{{ left[l] }}</span>
@@ -205,7 +233,8 @@ function getMatchedRightLabel(leftIdx: number) {
       </p>
     </div>
 
-    <div v-if="hasSubmitted" class="mt-2 animate__animated animate__bounceIn" style="font-weight:700; color: var(--mint-dark)">
+    <!-- Blitz/survival submitted confirmation -->
+    <div v-if="!allowChange && hasSubmitted" class="mt-2 animate__animated animate__bounceIn" style="font-weight:700; color: var(--mint-dark)">
       <i class="la la-check-circle" /> Matches submitted!
     </div>
   </div>

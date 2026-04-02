@@ -12,10 +12,18 @@ const emit = defineEmits<{
 }>()
 
 const inputVal = ref(props.savedAnswer !== undefined ? String(props.savedAnswer) : '')
-const hasSubmitted = ref(props.savedAnswer !== undefined)
+// hasSubmitted only used in non-allowChange (blitz/survival) mode
+const hasSubmitted = ref(!props.allowChange && props.savedAnswer !== undefined)
 const parsedValue = computed(() => {
   const n = parseInt(inputVal.value, 10)
   return isNaN(n) ? null : n
+})
+
+// In classic/allowChange mode: auto-save on every valid change
+watch(parsedValue, (val) => {
+  if (props.allowChange && !props.locked && val !== null) {
+    emit('answer', val)
+  }
 })
 
 function submit() {
@@ -39,10 +47,12 @@ function onKey(e: KeyboardEvent) {
         type="number"
         class="input input-xl int-input"
         placeholder="Enter a number"
-        :disabled="locked || (hasSubmitted && !allowChange)"
+        :disabled="locked || (!allowChange && hasSubmitted)"
         @keydown="onKey"
       />
+      <!-- Submit button only shown in blitz/survival mode (not classic/allowChange) -->
       <button
+        v-if="!allowChange"
         class="btn btn-xl btn-primary"
         :disabled="locked || hasSubmitted || parsedValue === null"
         @click="submit"
@@ -51,10 +61,18 @@ function onKey(e: KeyboardEvent) {
         Submit
       </button>
     </div>
-    <div v-if="hasSubmitted" class="int-submitted animate__animated animate__bounceIn">
+
+    <!-- Classic mode: show saved indicator when a valid number is entered -->
+    <div v-if="allowChange && parsedValue !== null" class="int-submitted animate__animated animate__bounceIn">
+      <i class="la la-save" style="color: var(--mint-dark)" />
+      Answer saved: <strong>{{ inputVal }}</strong>
+    </div>
+    <!-- Blitz/survival mode: show submitted state -->
+    <div v-else-if="!allowChange && hasSubmitted" class="int-submitted animate__animated animate__bounceIn">
       <i class="la la-check-circle" style="color: var(--mint-dark)" />
       Answer submitted: <strong>{{ inputVal }}</strong>
     </div>
+
     <div v-if="correctAnswer !== null && correctAnswer !== undefined" class="int-answer animate__animated animate__fadeIn">
       <span v-if="parsedValue === correctAnswer" style="color: var(--mint-dark)">
         <i class="la la-check-circle" /> Correct!

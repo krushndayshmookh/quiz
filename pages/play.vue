@@ -347,18 +347,6 @@ function classicGoTo(qi: number) {
 const classicCurrentQ = computed(() => classicQuestions.value[classicCurrentIndex.value] ?? null)
 const classicAnsweredCount = computed(() => Object.keys(classicAnswers.value).length)
 
-// Auto-submit when all questions answered in classic mode
-watch(classicAnsweredCount, (count) => {
-  if (
-    mode.value === 'classic'
-    && totalQuestions.value > 0
-    && count >= totalQuestions.value
-    && !hasSubmittedClassic.value
-    && !isSpectator.value
-  ) {
-    submitClassic()
-  }
-})
 
 function openChangeName() {
   newNameInput.value = playerName.value
@@ -559,6 +547,14 @@ function confirmQuit() {
             <span v-if="hasSubmittedClassic" class="badge badge-mint" style="font-size:0.95rem; padding:0.4rem 0.8rem">
               <i class="la la-check-circle" /> Submitted
             </span>
+            <button
+              v-if="!hasSubmittedClassic && !isSpectator"
+              class="btn btn-sm btn-mint"
+              :disabled="classicAnsweredCount === 0"
+              @click="submitClassic"
+            >
+              <i class="la la-paper-plane" /> Submit All
+            </button>
             <button v-if="!hasSubmittedClassic" class="btn btn-sm btn-coral" @click="showQuitConfirm = true">
               <i class="la la-sign-out-alt" /> Quit
             </button>
@@ -665,16 +661,19 @@ function confirmQuit() {
           >
             Next <i class="la la-arrow-right" />
           </button>
-          <span v-else-if="!hasSubmittedClassic" class="text-muted text-sm" style="font-weight:700">
-            <i class="la la-info-circle" /> Answer all to auto-submit
-          </span>
+          <button
+            v-else-if="!hasSubmittedClassic && !isSpectator"
+            class="btn btn-xl btn-mint"
+            :disabled="classicAnsweredCount === 0"
+            @click="submitClassic"
+          >
+            <i class="la la-paper-plane" /> Submit All
+          </button>
         </div>
 
         <div v-if="!hasSubmittedClassic && classicAnsweredCount > 0 && !isSpectator" class="auto-submit-hint mt-2">
-          <i class="la la-check-circle" />
+          <i class="la la-check-circle" style="color: var(--mint-dark)" />
           {{ classicAnsweredCount }}/{{ totalQuestions }} answered
-          <span v-if="classicAnsweredCount < totalQuestions"> — answer all to auto-submit</span>
-          <span v-else class="text-mint-dark"> — submitting...</span>
         </div>
 
         <div v-if="hasSubmittedClassic" class="classic-submitted-banner animate__animated animate__bounceIn">
