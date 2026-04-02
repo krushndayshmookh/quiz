@@ -23,6 +23,7 @@ function setupSocketIO(httpServer: any, adminPassword: string) {
   const io = new SocketIOServer(httpServer, {
     cors: { origin: '*', methods: ['GET', 'POST'] },
     serveClient: false,
+    path: '/socket.io/',
     transports: ['websocket', 'polling'],
   })
 
@@ -683,15 +684,22 @@ export default defineNitroPlugin((nitroApp: any) => {
   const config = useRuntimeConfig()
   const adminPassword = (config.adminPassword as string) || 'admin'
 
-  // Try multiple hooks — 'listen' works in production, 'afterListen' in some versions
+  // 'listen:node' provides the raw Node HTTP server (Nitro 2.x / Nuxt 3.10+, works in dev + prod)
+  nitroApp.hooks.hook('listen:node', (server: any) => {
+    setupSocketIO(server, adminPassword)
+  })
+
+  // Fallback for older Nitro: 'listen' hook (production)
   nitroApp.hooks.hook('listen', (server: any) => {
     setupSocketIO(server, adminPassword)
   })
 
-  // Fallback: hook into the request to grab the underlying server
+  // Last-resort fallback: grab server from first request, but defer via setImmediate
+  // so Socket.IO doesn't intercept the request that triggered this hook
   nitroApp.hooks.hook('request', (event: any) => {
     if (!initialized && event.node?.req?.socket?.server) {
-      setupSocketIO(event.node.req.socket.server, adminPassword)
+      const server = event.node.req.socket.server
+      setImmediate(() => setupSocketIO(server, adminPassword))
     }
   })
 })
