@@ -366,11 +366,6 @@ function scrollTo(id: string) {
               </a>
             </div>
           </div>
-
-          <div class="guide-note mt-3">
-            <i class="la la-info-circle" />
-            The version number reflects <code>version</code> in <code>package.json</code>. Increment it when deploying a new release so instructors can confirm they're running the latest build.
-          </div>
         </section>
 
       </main>
