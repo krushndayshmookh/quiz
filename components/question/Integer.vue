@@ -40,7 +40,7 @@ function onKey(e: KeyboardEvent) {
 
 <template>
   <div class="integer-wrap">
-    <div class="question-text animate__animated animate__fadeInDown">{{ question }}</div>
+    <QuestionText :text="question" class="animate__animated animate__fadeInDown" />
     <div class="int-input-row animate__animated animate__fadeInUp">
       <input
         v-model="inputVal"

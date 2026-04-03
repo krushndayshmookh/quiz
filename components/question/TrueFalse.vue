@@ -31,7 +31,7 @@ function btnClass(val: boolean) {
 
 <template>
   <div class="tf-wrap">
-    <div class="question-text animate__animated animate__fadeInDown">{{ question }}</div>
+    <QuestionText :text="question" class="animate__animated animate__fadeInDown" />
     <div class="tf-grid">
       <button
         class="answer-btn tf-btn animate__animated animate__fadeInLeft"
@@ -70,6 +70,15 @@ function btnClass(val: boolean) {
 
 .tf-true  { background: var(--mint-light); }
 .tf-false { background: var(--coral-light); }
+
+/* Selected: override the per-button color with the shared purple, matching MCQ */
+.answer-btn.selected {
+  background: var(--purple) !important;
+  border-color: var(--purple-dark) !important;
+  color: var(--white);
+  box-shadow: 4px 4px 0 rgba(30, 30, 46, 0.25);
+  transform: scale(1.02);
+}
 
 @media (max-width: 420px) {
   .tf-grid { grid-template-columns: 1fr; }

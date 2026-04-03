@@ -161,7 +161,7 @@ function getMatchedRightLabel(leftIdx: number) {
 
 <template>
   <div class="match-wrap">
-    <div class="question-text animate__animated animate__fadeInDown">{{ question }}</div>
+    <QuestionText :text="question" class="animate__animated animate__fadeInDown" />
     <p v-if="!locked" class="text-muted text-sm mb-2">
       <i class="la la-info-circle" />
       <span v-if="allowChange">Select a left item, then a right item to match</span>
