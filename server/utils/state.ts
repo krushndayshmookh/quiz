@@ -180,13 +180,19 @@ export function getLeaderboard() {
     }))
 }
 
-// Full leaderboard including eliminated (for survival spectators)
+// Full leaderboard including eliminated (for survival end screen / spectators)
 export function getFullLeaderboard() {
   return [...state.players.values()]
     .filter(p => !p.spectator)
     .sort((a, b) => {
+      // Active players always rank above eliminated
       if (a.eliminated !== b.eliminated) return a.eliminated ? 1 : -1
-      return b.score - a.score
+      // Within same elimination status: sort by score descending (questions survived + speed bonus)
+      if (b.score !== a.score) return b.score - a.score
+      // Final tiebreak: earlier last answer wins
+      const aTime = a.submitTime ?? Infinity
+      const bTime = b.submitTime ?? Infinity
+      return aTime - bTime
     })
     .map((p, i) => ({
       id: p.id,

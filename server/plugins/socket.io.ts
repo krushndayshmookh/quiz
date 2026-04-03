@@ -134,6 +134,13 @@ function setupSocketIO(httpServer: any, adminPassword: string) {
         if (!hasAnswer || !validateAnswer(qIndex, playerAnswer)) {
           player.eliminated = true
           io.to(player.id).emit('quiz:eliminated', { reason: hasAnswer ? 'wrong' : 'timeout' })
+        } else {
+          // Survived: 1000 base points + speed tiebreaker (0–200)
+          // Primary rank = questions survived; speed only breaks ties within the same count
+          const answerMs = (player.answerTime[qIndex] ?? 0) - state.questionStartTime
+          const timeLimit = state.quiz?.timePerQuestion ?? 30
+          const ratio = Math.max(0, 1 - answerMs / (timeLimit * 1000))
+          player.score += 1000 + Math.floor(200 * ratio)
         }
       } else if (mode === 'blitz') {
         if (hasAnswer) {
