@@ -28,10 +28,14 @@ COPY --from=build --chown=nstquiz:nstquiz /app/.output ./.output
 
 USER nstquiz
 
-# ADMIN_PASSWORD must be set via environment variable / Kubernetes secret
+# ADMIN_PASSWORD: set at build time via --build-arg, or override at runtime with -e.
+# WARNING: build-arg values are visible in `docker history`. For production,
+# prefer setting this via -e at runtime or a Kubernetes secret instead.
+ARG ADMIN_PASSWORD=admin
 ENV NODE_ENV=production
 ENV PORT=3000
 ENV HOST=0.0.0.0
+ENV ADMIN_PASSWORD=${ADMIN_PASSWORD}
 
 EXPOSE 3000
 
