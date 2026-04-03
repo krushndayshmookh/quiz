@@ -11,6 +11,12 @@ FROM node:24-alpine AS build
 
 WORKDIR /app
 
+# Re-declare ARG so this stage can inherit it from `docker build --build-arg`.
+# Promote to ENV so that Node.js reads it via process.env.ADMIN_PASSWORD when
+# nuxt.config.ts is evaluated during `nuxt build`.
+ARG ADMIN_PASSWORD=admin
+ENV ADMIN_PASSWORD=${ADMIN_PASSWORD}
+
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
@@ -28,9 +34,10 @@ COPY --from=build --chown=nstquiz:nstquiz /app/.output ./.output
 
 USER nstquiz
 
-# ADMIN_PASSWORD: set at build time via --build-arg, or override at runtime with -e.
+# Re-declare so the same --build-arg also sets the runtime default.
+# Can still be overridden at container start with: docker run -e ADMIN_PASSWORD=...
 # WARNING: build-arg values are visible in `docker history`. For production,
-# prefer setting this via -e at runtime or a Kubernetes secret instead.
+# prefer injecting via -e at runtime or a Kubernetes secret.
 ARG ADMIN_PASSWORD=admin
 ENV NODE_ENV=production
 ENV PORT=3000
