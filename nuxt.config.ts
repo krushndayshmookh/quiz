@@ -1,3 +1,8 @@
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+
+const pkg = JSON.parse(readFileSync(resolve('./package.json'), 'utf-8'))
+
 export default defineNuxtConfig({
   compatibilityDate: '2026-03-04',
   devtools: { enabled: false },
@@ -13,6 +18,10 @@ export default defineNuxtConfig({
   },
   runtimeConfig: {
     adminPassword: process.env.ADMIN_PASSWORD || 'admin',
+    public: {
+      version: pkg.version as string,
+      repository: (pkg.repository as string) || '',
+    },
   },
   app: {
     head: {

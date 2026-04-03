@@ -1,6 +1,8 @@
 <script setup lang="ts">
 useHead({ title: 'Usage Guide — NST Quiz' })
 
+const { public: { version, repository } } = useRuntimeConfig()
+
 const sections = [
   { id: 'overview',       label: 'Overview' },
   { id: 'quickstart',     label: 'Quick Start' },
@@ -11,6 +13,7 @@ const sections = [
   { id: 'flags',          label: 'Feature Flags' },
   { id: 'leaderboard',    label: 'Leaderboard' },
   { id: 'tips',           label: 'Tips' },
+  { id: 'version',        label: 'Version' },
 ]
 
 function scrollTo(id: string) {
@@ -26,7 +29,10 @@ function scrollTo(id: string) {
         <div class="flex items-center gap-2">
           <div class="guide-logo"><i class="la la-book" /></div>
           <div>
-            <h2 class="font-black" style="margin:0">NST Quiz</h2>
+            <div style="display:flex;align-items:center;gap:0.5rem">
+              <h2 class="font-black" style="margin:0">NST Quiz</h2>
+              <span class="version-badge">v{{ version }}</span>
+            </div>
             <span class="text-muted text-sm">Usage Guide</span>
           </div>
         </div>
@@ -140,7 +146,7 @@ function scrollTo(id: string) {
             <ul>
               <li>Each correct answer = 100 points</li>
               <li>Tiebreak: earlier submission wins</li>
-              <li>Auto-submits when all questions are answered</li>
+              <li>Students can edit any answer before hitting <strong>Submit All</strong></li>
               <li>Admin can hide scores until quiz ends (<em>Hide Scores</em> flag)</li>
             </ul>
           </div>
@@ -169,11 +175,13 @@ function scrollTo(id: string) {
                 <span class="badge badge-coral ml-1">Elimination</span>
               </div>
             </div>
-            <p>One question at a time. Get it wrong (or don't answer before timer) and you're eliminated. Last player standing wins. Eliminated students become spectators and can still watch.</p>
+            <p>One question at a time. Get it wrong (or don't answer before the timer) and you're eliminated. Last player standing wins. Eliminated students become spectators and can still watch.</p>
             <ul>
+              <li>Each survived question = <strong>1000 base points</strong> + up to <strong>200 speed bonus</strong></li>
+              <li>Speed bonus only breaks ties — surviving more questions always wins</li>
               <li>Eliminated on wrong answer or timeout</li>
               <li>If everyone is eliminated at once, quiz ends immediately</li>
-              <li>Full leaderboard shows eliminated players greyed out</li>
+              <li>Full leaderboard shows eliminated players greyed out, ranked by how far they reached</li>
             </ul>
           </div>
         </section>
@@ -335,6 +343,34 @@ function scrollTo(id: string) {
             <li><i class="la la-check-circle" /><span>Use <strong>Reset Quiz</strong> between sessions to clear all players and scores before uploading the next quiz.</span></li>
             <li><i class="la la-check-circle" /><span>The <strong>CSV export</strong> (View Results → Download CSV) gives you a full answer matrix per student — import it into a spreadsheet for grading.</span></li>
           </ul>
+        </section>
+
+        <!-- ─── Version ─── -->
+        <section id="version" class="guide-section">
+          <h2><i class="la la-tag" /> Version</h2>
+
+          <div class="version-card">
+            <div class="version-row">
+              <span class="version-label"><i class="la la-cube" /> App version</span>
+              <code class="version-value">v{{ version }}</code>
+            </div>
+            <div class="version-row">
+              <span class="version-label"><i class="la la-balance-scale" /> License</span>
+              <code class="version-value">MIT</code>
+            </div>
+            <div v-if="repository" class="version-row">
+              <span class="version-label"><i class="la la-code-branch" /> Repository</span>
+              <a :href="repository" target="_blank" rel="noopener" class="version-repo-link">
+                <i class="la la-external-link-alt" />
+                {{ repository.replace('https://', '') }}
+              </a>
+            </div>
+          </div>
+
+          <div class="guide-note mt-3">
+            <i class="la la-info-circle" />
+            The version number reflects <code>version</code> in <code>package.json</code>. Increment it when deploying a new release so instructors can confirm they're running the latest build.
+          </div>
         </section>
 
       </main>
@@ -550,6 +586,65 @@ function scrollTo(id: string) {
 
 /* Text helpers */
 .text-mint { color: var(--mint-dark); }
+
+/* Version badge in header */
+.version-badge {
+  background: var(--mint-light);
+  color: var(--mint-dark);
+  border: 2px solid var(--mint-dark);
+  border-radius: 20px;
+  padding: 0.1rem 0.6rem;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+/* Version section card */
+.version-card {
+  background: var(--white);
+  border: 2px solid var(--dark);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 3px 3px 0 rgba(30,30,46,0.1);
+}
+.version-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.85rem 1.25rem;
+  border-bottom: 1px solid rgba(30,30,46,0.1);
+}
+.version-row:last-child { border-bottom: none; }
+.version-label {
+  min-width: 160px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--mid);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.version-value {
+  background: var(--purple-light);
+  color: var(--purple-dark);
+  border: 1.5px solid var(--purple-dark);
+  border-radius: 6px;
+  padding: 0.15em 0.5em;
+  font-size: 0.95rem;
+  font-weight: 700;
+  font-family: monospace;
+}
+.version-repo-link {
+  color: var(--sky-dark);
+  font-weight: 700;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.9rem;
+}
+.version-repo-link:hover { text-decoration: underline; }
 
 @media (max-width: 700px) {
   .guide-layout { grid-template-columns: 1fr; }

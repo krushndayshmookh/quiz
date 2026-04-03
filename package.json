@@ -2,6 +2,7 @@
   "name": "nst-quiz",
   "version": "1.1.0",
   "license": "MIT",
+  "repository": "https://github.com/krushndayshmookh/quiz",
   "private": true,
   "scripts": {
     "build": "nuxt build",
